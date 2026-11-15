@@ -26,7 +26,7 @@ export function startHostGame(G, opts) {
   const snd = sound(opts.isMuted);
   let room = opts.room || null;
   let sim = null, snap = null, prev = null, snapAt = 0, snapGap = 0.1, overSent = false, lastSent = "", lastMask = -1, sendWait = 0, t = 0;
-  const remote = [0, 0, 0, 0], mem = [{}, {}, {}, {}], fxMem = {};
+  const remote = [0, 0, 0, 0], latch = [0, 0, 0, 0], mem = [{}, {}, {}, {}], fxMem = {};      // latch: 한 틱 사이에 눌렀다 뗀 버튼도 놓치지 않게
   const level = opts.level || "normal";
 
   const kb = keyboard(new Set(Object.keys(SOLO)));
@@ -87,7 +87,7 @@ export function startHostGame(G, opts) {
       if (seat.c === "k2") return human(P2, false);
       if (seat.c === "r") {
         if (seat.slot === mySlot()) return human(SOLO, true);
-        if (room.players.some((p) => p.slot === seat.slot)) { aims[i] = remoteAim[seat.slot]; return remote[seat.slot]; }
+        if (room.players.some((p) => p.slot === seat.slot)) { aims[i] = remoteAim[seat.slot]; const r = remote[seat.slot] | latch[seat.slot]; latch[seat.slot] = 0; return r; }
         return robot("normal");                          // 나간 사람 자리는 봇이 이어받는다
       }
       return robot(kind === "online" ? "normal" : level);
@@ -146,7 +146,9 @@ export function startHostGame(G, opts) {
       } else if (msg[0] === "i") {
         const slot = +msg[1]; if (!(slot >= 0 && slot < 4)) return;
         const part = msg.slice(2).split(":");
-        remote[slot] = parseInt(part[0], 10) & 127;
+        const nm = parseInt(part[0], 10) & 127;
+        latch[slot] |= nm & ~remote[slot];
+        remote[slot] = nm;
         if (part.length >= 3) {
           const num = (k, lo, hi) => Math.max(lo, Math.min(hi, parseInt(part[k], 10) || 0));
           remoteAim[slot] = { x: num(1, -400, 400), y: num(2, -400, 400) };
