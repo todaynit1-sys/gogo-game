@@ -8,6 +8,8 @@ import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
 const W = 960, H = 540, COLW = 4, NC = 240, GRAV = 0.12, WINDK = 0.012, START = 100, TURN = 20 * 60, FUEL = 180;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ty = (s, x) => s.h[clamp(Math.round(x / COLW), 0, NC - 1)];
+const VOID_Y = H - 2, HOLE = H + 60;                       // 땅 높이가 화면 바닥에 닿으면 구멍(낭떠러지)
+const isVoid = (s, x) => ty(s, x) >= VOID_Y;
 const speedOf = (pw) => 2.5 + pw * 0.105;
 const newWind = () => Math.round((Math.random() * 2 - 1) * 10) / 10;
 
@@ -62,9 +64,9 @@ function init(seats) {
   const p = seats.map((_, i) => {
     const x = Math.round((W * (i + 0.5)) / n + Math.random() * 40 - 20), c = Math.round(x / COLW), base = h[c];
     for (let k = -5; k <= 5; k++) if (h[c + k] != null) h[c + k] = base;      // 대포 밑은 평평하게
-    return { x, hp: 100, f: x < W / 2 ? 1 : -1, el: 50, pw: 0, fuel: FUEL, al: 1, pa: 0, pb: 0, w: 0, sd: 0, xt: 0, am: SHELLS.map((k) => k.n) };
+    return { x, y: base, vy: 0, hp: 100, f: x < W / 2 ? 1 : -1, el: 50, pw: 0, fuel: FUEL, al: 1, pa: 0, pb: 0, w: 0, sd: 0, xt: 0, am: SHELLS.map((k) => k.n) };
   });
-  const s = { tick: 0, seats, h, hv: 1, map, th: (Math.random() * THEMES.length) | 0, p, turn: 0, ph: 0, tl: TURN, tm: 0, wind: newWind(), sh: [], ex: [], it: [], msg: [], over: null, fc: 0, bc: 0, dc: 0, tn: 0, wc: 0, bn: 0, ic: 0 };
+  const s = { tick: 0, seats, h, hv: 1, map, th: (Math.random() * THEMES.length) | 0, p, turn: 0, ph: 0, tl: TURN, tm: 0, wind: newWind(), sh: [], ex: [], it: [], msg: [], over: null, fc: 0, bc: 0, dc: 0, tn: 0, wc: 0, bn: 0, ic: 0, fall: 0 };
   spawnItem(s);
   return s;
 }
@@ -86,13 +88,13 @@ function give(s, i, at) {
   else if (it.k === 1) { const k = 1 + ((Math.random() * (SHELLS.length - 1)) | 0); p.am[k]++; text = SHELLS[k].name + " +1"; }
   else if (it.k === 2) { p.sd = 1; text = "방패!"; }
   else { p.xt = 1; text = "한 번 더!"; }
-  s.msg.push({ x: Math.round(p.x), y: Math.round(ty(s, p.x) - 80), text, t: 0 });
+  s.msg.push({ x: Math.round(p.x), y: Math.round(p.y - 80), text, t: 0 });
   if (s.msg.length > 5) s.msg.shift();
 }
 
 function muzzle(s, p) {
   const r = (p.el * Math.PI) / 180;
-  return [p.x + Math.cos(r) * 26 * p.f, ty(s, p.x) - 18 - Math.sin(r) * 26, r];
+  return [p.x + Math.cos(r) * 26 * p.f, p.y - 18 - Math.sin(r) * 26, r];
 }
 
 function fire(s) {
@@ -111,13 +113,13 @@ function boom(s, x, y, k) {
     const dx = i * COLW - x;
     if (Math.abs(dx) >= rad) continue;
     const bottom = y + Math.sqrt(rad * rad - dx * dx) * (sh.dig || 1);
-    if (bottom > s.h[i]) s.h[i] = Math.round(Math.min(H - 14, bottom));
+    if (bottom > s.h[i]) s.h[i] = bottom >= VOID_Y ? HOLE : Math.round(bottom);      // 바닥까지 파이면 구멍
   }
   s.hv++;
   for (let at = s.it.length - 1; at >= 0; at--) if (Math.hypot(s.it[at].x - x, s.it[at].y - y) < rad + 16) give(s, s.turn, at);      // 포탄으로 맞힌 상자는 쏜 사람 것
   for (const p of s.p) {
     if (!p.al) continue;
-    const d = Math.hypot(p.x - x, ty(s, p.x) - 12 - y);
+    const d = Math.hypot(p.x - x, p.y - 12 - y);
     if (d < rad + 22) {
       let dmg = Math.round(sh.d * (1 - d / (rad + 22))) + (d < 22 ? 12 : 0);
       if (p.sd) { dmg = Math.ceil(dmg / 2); p.sd = 0; }      // 방패는 한 번의 피해를 절반으로
@@ -145,20 +147,38 @@ function step(s, masks) {
   if (s.ex.length && s.ex[0].t > 36) s.ex = s.ex.filter((e) => e.t <= 36);
   for (const q of s.msg) q.t++;
   if (s.msg.length && s.msg[0].t > 90) s.msg.shift();
-  for (const q of s.it) { const g = ty(s, q.x) - 12; q.y = q.y < g ? Math.min(g, q.y + 1.5) : g; }      // 상자는 낙하산으로 천천히 내려와 땅에 놓인다
+  for (let k = s.it.length - 1; k >= 0; k--) {      // 상자는 낙하산으로 천천히 내려와 땅에 놓인다. 구멍 위면 떨어져 사라진다
+    const q = s.it[k];
+    if (isVoid(s, q.x)) { q.y += 3; if (q.y > H + 20) s.it.splice(k, 1); continue; }
+    const g = ty(s, q.x) - 12; q.y = q.y < g ? Math.min(g, q.y + 1.5) : g;
+  }
+  for (const p of s.p) {      // 대포: 발밑 땅이 꺼지면 떨어지고, 구멍이면 낭떠러지로
+    if (!p.al) continue;
+    const g = ty(s, p.x), hole = g >= VOID_Y;
+    if (hole || p.y < g - 0.5) {
+      p.vy += 0.4; p.y += p.vy;
+      if (!hole && p.y >= g) {
+        p.y = g;
+        if (p.vy > 8) { const dmg = Math.round((p.vy - 8) * 4); p.hp -= dmg; s.msg.push({ x: Math.round(p.x), y: Math.round(p.y - 80), text: "쿵! −" + dmg, t: 0 }); if (p.hp <= 0) { p.hp = 0; p.al = 0; s.dc++; } }
+        p.vy = 0;
+      }
+      if (p.y > H + 30) { p.al = 0; p.hp = 0; s.dc++; s.fall++; s.msg.push({ x: Math.round(clamp(p.x, 70, W - 70)), y: H - 70, text: "낭떠러지로 떨어졌다!", t: 0 }); }
+    } else { p.y = g; p.vy = 0; }
+  }
   if (s.over) { s.over.t++; return; }
   if (s.tick < START) return;
+  if (s.ph === 0 && !s.p[s.turn].al) { s.ph = 2; s.tm = 60; return; }      // 내 차례에 떨어져 탈락
   if (s.ph === 0) {
     const p = s.p[s.turn], m = masks[s.turn] | 0;
-    if (m & (L | R)) {
+    if (m & (L | R) && p.vy === 0) {
       const dir = m & L ? -1 : 1; p.f = dir;
       if (p.fuel > 0 && !p.pw) {
         // 앞쪽 한 칸의 높이 차로 비탈을 본다. 가파르면 느리고 연료가 더 들고, 절벽(30 넘게)만 못 오른다.
-        const rise = ty(s, p.x) - ty(s, clamp(p.x + dir * COLW, 0, W));
+        const rise = p.y - ty(s, clamp(p.x + dir * COLW, 0, W));      // 구멍 쪽은 내리막이라 걸어 들어가면 떨어진다
         if (rise <= 30) {
           const sp = rise > 10 ? 1 : 2;
           p.x = clamp(p.x + dir * sp, 16, W - 16); p.fuel -= rise > 10 ? 2.5 : 2;
-          for (let at = s.it.length - 1; at >= 0; at--) if (Math.abs(s.it[at].x - p.x) < 24 && Math.abs(s.it[at].y - (ty(s, p.x) - 12)) < 30) give(s, s.turn, at);      // 지나가며 줍기
+          for (let at = s.it.length - 1; at >= 0; at--) if (Math.abs(s.it[at].x - p.x) < 24 && Math.abs(s.it[at].y - (p.y - 12)) < 30) give(s, s.turn, at);      // 지나가며 줍기
         }
       }
     }
@@ -183,7 +203,7 @@ function step(s, masks) {
         if (b.bn > 0) { b.bn--; b.y = ty(s, b.x) - 2; b.vy = -Math.abs(b.vy) * 0.62; b.vx *= 0.85; s.bn++; }      // 통통탄은 튄다
         else hit = true;
       } else {
-        for (const p of s.p) if (p.al && b.age > 8 && Math.hypot(p.x - b.x, ty(s, p.x) - 14 - b.y) < 22) { hit = true; break; }
+        for (const p of s.p) if (p.al && b.age > 8 && Math.hypot(p.x - b.x, p.y - 14 - b.y) < 22) { hit = true; break; }
       }
       if (hit) { boom(s, b.x, b.y, b.k); s.sh.splice(k, 1); }
     }
@@ -221,7 +241,7 @@ function solve(s, i, level) {
   const me = s.p[i], foes = s.p.filter((p, j) => j !== i && p.al);
   if (!foes.length) return { f: me.f, el: 45, pw: 50 };
   const t = level === "hard" ? foes.reduce((a, b) => (b.hp < a.hp ? b : a)) : foes[(Math.random() * foes.length) | 0];
-  const f = t.x > me.x ? 1 : -1, y0 = ty(s, me.x) - 18;
+  const f = t.x > me.x ? 1 : -1, y0 = me.y - 18;
   let best = null;
   for (let el = 20; el <= 86; el += 3) {
     const r = (el * Math.PI) / 180, mx = me.x + Math.cos(r) * 26 * f, my = y0 - Math.sin(r) * 26;
@@ -251,6 +271,7 @@ function bot(s, i, mem, level) {
   if (mem.wait-- > 0) return 0;
   if (mem.walk) {
     if (!s.it.includes(mem.walk) || p.fuel <= 3 || mem.wt++ > 160 || Math.abs(mem.walk.x - p.x) < 4) { mem.walk = null; mem.plan = solve(s, i, level); }
+    else if (isVoid(s, p.x + (mem.walk.x > p.x ? 10 : -10))) { mem.walk = null; mem.plan = solve(s, i, level); }      // 구멍으로는 안 걸어간다
     else return mem.walk.x > p.x ? R : L;
   }
   if (p.w !== mem.want) return s.tick % 8 < 4 ? B : 0;
@@ -274,28 +295,36 @@ function draw(ctx, v, env) {
   }
   ctx.fillStyle = th.cloud;
   for (let i = 0; i < 4; i++) { const x = ((i * 290 + env.t * (8 + v.wind * 14)) % (W + 240) + W + 240) % (W + 240) - 120, y = 70 + (i % 2) * 50; ctx.beginPath(); ctx.ellipse(x, y, 50, 17, 0, 0, 7); ctx.ellipse(x + 30, y - 12, 30, 16, 0, 0, 7); ctx.fill(); }
+  // 낭떠러지(구멍 밑 어둠)
+  const ab = ctx.createLinearGradient(0, H - 110, 0, H); ab.addColorStop(0, "rgba(21,18,42,0)"); ab.addColorStop(1, "rgba(21,18,42,.9)");
+  ctx.fillStyle = ab; ctx.fillRect(0, H - 110, W, 110);
   // 땅
-  ctx.beginPath(); ctx.moveTo(0, H);
-  for (let i = 0; i < NC; i++) ctx.lineTo(i * COLW, v.h[i]);
-  ctx.lineTo(W, v.h[NC - 1]); ctx.lineTo(W, H); ctx.closePath();
+  const hy = (i) => Math.min(v.h[i], H + 4);
+  ctx.beginPath(); ctx.moveTo(0, H + 4);
+  for (let i = 0; i < NC; i++) ctx.lineTo(i * COLW, hy(i));
+  ctx.lineTo(W, hy(NC - 1)); ctx.lineTo(W, H + 4); ctx.closePath();
   const gg = ctx.createLinearGradient(0, 160, 0, H); gg.addColorStop(0, th.soil[0]); gg.addColorStop(1, th.soil[1]);
   ctx.fillStyle = gg; ctx.fill();
-  ctx.beginPath(); for (let i = 0; i < NC; i++) ctx.lineTo(i * COLW, v.h[i]); ctx.lineTo(W, v.h[NC - 1]);
-  ctx.strokeStyle = th.grass; ctx.lineWidth = 9; ctx.lineJoin = "round"; ctx.stroke();
+  ctx.beginPath();
+  let pen = false;
+  for (let i = 0; i < NC; i++) { if (v.h[i] >= VOID_Y) { pen = false; continue; } if (pen) ctx.lineTo(i * COLW, v.h[i]); else { ctx.moveTo(i * COLW, v.h[i]); pen = true; } }
+  ctx.strokeStyle = th.grass; ctx.lineWidth = 9; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
   ctx.strokeStyle = th.edge; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = "rgba(255,93,115,.75)";      // 구멍 바닥에 빨간 경고 줄
+  for (let i = 0; i < NC; i++) if (v.h[i] >= VOID_Y && (i + Math.floor(env.t * 6)) % 4 < 2) ctx.fillRect(i * COLW, H - 5, COLW, 5);
 
   const cur = v.p[v.turn], aiming = v.ph === 0 && v.tick >= START && !v.over;
   // 조준 안내선 (지금 쏘는 사람)
   if (aiming && cur.al) {
     const r = (cur.el * Math.PI) / 180, sp = speedOf(cur.pw > 3 ? cur.pw : 55);
-    let x = cur.x + Math.cos(r) * 26 * cur.f, y = ty(v, cur.x) - 18 - Math.sin(r) * 26, vx = Math.cos(r) * sp * cur.f, vy = -Math.sin(r) * sp;
+    let x = cur.x + Math.cos(r) * 26 * cur.f, y = cur.y - 18 - Math.sin(r) * 26, vx = Math.cos(r) * sp * cur.f, vy = -Math.sin(r) * sp;
     ctx.fillStyle = th.stars ? "rgba(255,255,255,.7)" : "rgba(43,45,110,.55)";
     for (let k = 0; k < 30; k++) { vx += v.wind * WINDK; vy += GRAV; x += vx; y += vy; if (k % 3 === 2) { ctx.beginPath(); ctx.arc(x, y, 3.2 - k * 0.06, 0, 7); ctx.fill(); } }
   }
   // 대포
   v.p.forEach((p, i) => {
     if (!p.al) return;
-    const x = p.x, y = ty(v, p.x), r = (p.el * Math.PI) / 180;
+    const q0 = env.prev && env.prev.p[i], x = q0 ? q0.x + (p.x - q0.x) * env.alpha : p.x, y = q0 && q0.y != null ? q0.y + (p.y - q0.y) * env.alpha : p.y, r = (p.el * Math.PI) / 180;
     ctx.strokeStyle = "#2b2d6e"; ctx.lineWidth = 8; ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(x + Math.cos(r) * 26 * p.f, y - 18 - Math.sin(r) * 26); ctx.stroke();
     ctx.fillStyle = "#2b2d6e"; rr(ctx, x - 20, y - 10, 40, 12, 6); ctx.fill();
@@ -305,6 +334,7 @@ function draw(ctx, v, env) {
     ctx.fillStyle = "rgba(43,45,110,.85)"; rr(ctx, x - 24, y - 60, 48, 9, 4); ctx.fill();
     ctx.fillStyle = p.hp > 50 ? "#7ddc7a" : p.hp > 25 ? "#ffc93c" : "#ff5d73"; rr(ctx, x - 22, y - 58, Math.max(2, 44 * p.hp / 100), 5, 2.5); ctx.fill();
     label(ctx, v.seats[i].name, x, y - 66, 13, i === env.me ? "#d6336c" : "#2a2440", "rgba(255,255,255,.9)");
+    if (p.vy > 4) label(ctx, "으아악!", x + 34, y - 30, 16, "#ff5d73", "#fff");
     if (aiming && i === v.turn) {
       const by = y - 92 + Math.sin(env.t * 6) * 4;
       ctx.fillStyle = SEAT_DARK[i]; ctx.beginPath(); ctx.moveTo(x - 9, by); ctx.lineTo(x + 9, by); ctx.lineTo(x, by + 11); ctx.fill();
@@ -378,6 +408,7 @@ function fx(v, m, snd, me) {
   if ((v.ic | 0) !== m.ic) { m.ic = v.ic | 0; snd.coin(); jingle(snd, [700, 940, 1180], 70); }
   if (v.fc !== m.fc) { m.fc = v.fc; snd.thud(1.4); snd.whoosh(); }
   if (v.bc !== m.bc) { m.bc = v.bc; snd.boom(1.2); }
+  if ((v.fall | 0) !== (m.fall | 0)) { m.fall = v.fall | 0; snd(900, 0.9, "triangle", 0.1, -760); }      // 떨어지는 소리
   if (v.dc !== m.dc) { m.dc = v.dc; snd(400, 0.35, "sawtooth", 0.1, -300); }
   if (v.wc !== m.wc) { m.wc = v.wc; snd(520, 0.05, "triangle", 0.08); }
   if (v.bn !== m.bn) { m.bn = v.bn; snd(380, 0.08, "sine", 0.09, 200); }
@@ -410,6 +441,7 @@ export const meta = {
     ["조작", "←→ 이동(대포 아래 파란 연료 막대만큼, 차례마다 다시 참), ↑↓ 포신 각도, 스페이스를 꾹 눌러 힘을 모았다가 떼면 발사"],
     ["포탄", "Q로 바꿔요. 기본탄(무제한), 대왕탄(크게 터짐), 세발탄(세 발이 퍼짐), 굴착탄(땅을 깊이 팜), 통통탄(두 번 튄 뒤 터짐). 특수탄은 두 발씩"],
     ["아이템", "낙하산 상자가 떨어져요. 지나가며 줍거나 포탄으로 맞히면 얻어요. 회복(체력 +35), 포탄 상자(특수탄 +1), 방패(다음 피해 절반), 한 번 더(바로 한 번 더 쏘기)"],
+    ["낭떠러지", "땅이 화면 바닥까지 파이면 구멍이 생겨요. 구멍 위의 대포는 떨어져 바로 탈락! 상대 발밑을 노려 보세요(굴착탄이 잘 파여요). 걸어서 구멍에 들어가도 떨어지고, 땅이 꺼져 높이 떨어지면 체력이 줄어요"],
     ["지형", "판마다 언덕·큰 산·골짜기·계단·협곡 가운데 하나가 나오고, 낮·노을·밤·눈밭으로 분위기가 바뀌어요. 차례마다 바람도 바뀌어요"],
     ["한 키보드 2인", "1P: W·A·S·D + F, 포탄 Q / 2P: 방향키 + Enter, 포탄 마침표(.)"],
     ["휴대폰", "방향 버튼으로 이동·각도, 포탄 버튼으로 바꾸고, 발사 버튼을 꾹 눌렀다 떼기"],
