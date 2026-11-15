@@ -1,6 +1,6 @@
 // 한판 오락실 — 로비, 방 대기실, 게임 실행
 import { SITE, GAMES } from "./config.js";
-import { startVolley } from "./games/volley.js";
+import { startVolley } from "./games/volley.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 const store = {

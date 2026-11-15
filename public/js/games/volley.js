@@ -451,14 +451,25 @@ export function startVolley(opts) {
     ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
-  function frame(now) {
-    if (!running) return;
+  // 게임 진행(pump)과 그리기를 분리한다. 화면이 가려져 그리기가 멈춰도
+  // 별도 타이머(워커)가 진행을 이어 가므로 다른 사람의 게임이 멈추지 않는다.
+  function pump() {
+    const now = performance.now();
     acc += Math.min(0.25, (now - last) / 1000); last = now;
     while (acc >= DT) { tick(); acc -= DT; }
+  }
+  function frame() {
+    if (!running) return;
+    pump();
     draw();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+  let ticker = null;
+  try {
+    ticker = new Worker(URL.createObjectURL(new Blob(["setInterval(()=>postMessage(0),16)"], { type: "text/javascript" })));
+    ticker.onmessage = () => { if (running) pump(); };
+  } catch {}
 
   return {
     // 서버에서 온 게임 메시지
@@ -475,6 +486,7 @@ export function startVolley(opts) {
     },
     stop() {
       running = false;
+      if (ticker) ticker.terminate();
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKey);
       window.removeEventListener("blur", onBlur);
