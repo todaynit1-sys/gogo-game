@@ -1,9 +1,9 @@
 // 쾅쾅 포격전 — 번갈아 가며 각도와 힘을 맞춰 포탄을 쏜다. 땅이 파이고, 바람이 분다.
 // 포탄 다섯 가지, 판마다 다른 지형과 하늘. 마지막까지 버틴 사람이 승리.
 
-import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=1";
-import { drawMochi, parseLook } from "../avatar.js?v=2";
-import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=1";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=2";
+import { drawMochi, parseLook } from "../avatar.js?v=3";
+import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=2";
 
 const W = 960, H = 540, COLW = 4, NC = 240, GRAV = 0.12, WINDK = 0.012, START = 100, TURN = 20 * 60, FUEL = 180;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -365,7 +365,7 @@ function draw(ctx, v, env) {
       label(ctx, sh.name + (left < 0 ? "" : " " + left), x + 24, H - 41, 14, on ? "#fff" : "#2b2d6e", null, "left");
       ctx.globalAlpha = 1;
     });
-    if (v.turn === env.me) label(ctx, "←→ 이동 · ↑↓ 각도 · Q 포탄 바꾸기 · 스페이스를 꾹 눌렀다 떼면 발사", W / 2, H - 12, 16, "#2a2440", "rgba(255,255,255,.9)");
+    if (v.turn === env.me) label(ctx, env.touch ? "◀▶ 이동 · ▲▼ 각도 · [포탄] 바꾸기 · [발사]를 꾹 눌렀다 떼기" : "←→ 이동 · ↑↓ 각도 · Q 포탄 바꾸기 · 스페이스를 꾹 눌렀다 떼면 발사", W / 2, H - 12, 16, "#2a2440", "rgba(255,255,255,.9)");
   }
   if (v.over) {
     const w = v.over.w;

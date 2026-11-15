@@ -12,6 +12,15 @@ export function beep(freq, dur = 0.1, type = "sine", vol = 0.12, slide = 0) {
     o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur);
   } catch {}
 }
+// 휴대폰(특히 iOS)은 손가락으로 건드린 순간에 소리를 한 번 켜 둬야 이후 소리가 난다
+export function unlockAudio() {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+    const src = actx.createBufferSource();
+    src.buffer = actx.createBuffer(1, 1, 22050); src.connect(actx.destination); src.start(0);
+  } catch {}
+}
 // 음소거를 따르는 소리 함수
 export const sound = (isMuted) => (...a) => { if (!(isMuted && isMuted())) beep(...a); };
 export const jingle = (snd, notes, gap = 120) => notes.forEach((f, i) => setTimeout(() => snd(f, 0.18, "triangle", 0.12), i * gap));

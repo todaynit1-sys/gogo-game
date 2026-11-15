@@ -1,6 +1,7 @@
 // 한판 오락실 — 로비, 방 대기실, 게임 실행
 import { SITE, GAMES } from "./config.js";
-import { BODY, FACES, HATS, PATTERNS, ACCS, drawMochi, parseLook, lookStr, randomLook } from "./avatar.js?v=2";
+import { unlockAudio } from "./games/kit.js?v=2";
+import { BODY, FACES, HATS, PATTERNS, ACCS, drawMochi, parseLook, lookStr, randomLook } from "./avatar.js?v=3";
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -16,14 +17,45 @@ let offline = null;       // 혼자/로컬 다시 하기용 설정
 let gameId = null, sawLobby = false, overPending = false;
 
 // 게임 모듈은 고를 때 불러온다
-const VER = "?v=14";
+const VER = "?v=16";
 const mods = {};
 const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" + VER));
 
 // ── 공통 ──
 function show(name) {
   for (const v of document.querySelectorAll(".view")) v.hidden = v.id !== "v-" + name;
+  document.documentElement.classList.toggle("playing", name === "play");
+  if (name === "home" || name === "game") leaveFullscreen();
   window.scrollTo(0, 0);
+  updateRotTip();
+}
+
+// ── 휴대폰: 전체 화면, 회전 안내 ──
+const coarse = () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+let prefPortrait = false, rotDismissed = false;
+function afterStart(mod) {
+  $("v-play").classList.toggle("nopad", !$("touch").children.length);
+  prefPortrait = !!mod.meta.portrait;
+  updateRotTip();
+}
+function updateRotTip() {
+  const tip = $("rotTip");
+  if (!tip) return;
+  const portraitNow = window.innerHeight > window.innerWidth;
+  const show = coarse() && !rotDismissed && !$("v-play").hidden && portraitNow !== prefPortrait;
+  tip.hidden = !show;
+  if (show) $("rotText").textContent = prefPortrait ? "세로로 들면 판이 더 크게 보여요" : "가로로 돌리면 더 크게 즐길 수 있어요";
+}
+function leaveFullscreen() {
+  try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch {}
+  if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+}
+async function toggleFullscreen() {
+  if (document.fullscreenElement) return leaveFullscreen();
+  try {
+    await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+    if (screen.orientation && screen.orientation.lock) screen.orientation.lock(prefPortrait ? "portrait" : "landscape").catch(() => {});
+  } catch { toast("이 브라우저에서는 전체 화면을 쓸 수 없어요"); }
 }
 let toastTimer = 0;
 function toast(msg) {
@@ -97,6 +129,7 @@ async function playOffline(cfg) {
     onOver: (r) => { $("resTitle").textContent = (r && r.title) || "한 판 더 할까요?"; $("result").hidden = false; },
   });
   gameId = current.id;
+  afterStart(mod);
 }
 
 window.__hp = () => (game && game.peek ? game.peek() : null);   // 점검용
@@ -173,6 +206,7 @@ async function onRoom(d) {
       onOver: () => { if (room && room.host === room.you) send({ t: "end" }); else overPending = true; },
     });
     gameId = d.game;
+    afterStart(mod);
   } else {
     sawLobby = true; overPending = false;
     stopGame();
@@ -329,6 +363,14 @@ async function copy(text, okMsg) {
 
 // ── 이벤트 연결 ──
 function init() {
+  // 휴대폰: 첫 터치에 소리를 켜고(iOS 는 손가락으로 건드려야 소리가 난다), 화면을 돌리면 안내를 다시 본다
+  window.addEventListener("pointerdown", unlockAudio, { once: true, capture: true });
+  window.addEventListener("touchend", unlockAudio, { once: true, capture: true });
+  window.addEventListener("resize", updateRotTip);
+  $("rotClose").addEventListener("click", () => { rotDismissed = true; updateRotTip(); });
+  $("fsBtn").hidden = !(document.fullscreenEnabled && coarse());
+  $("fsBtn").addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", () => { $("fsBtn").textContent = document.fullscreenElement ? "원래 화면" : "전체 화면"; });
   document.title = SITE.name + " — 가입 없이 친구랑 바로 한 판";
   $("nick").value = store.get("hp_name") || "";
   renderCards();

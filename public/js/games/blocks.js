@@ -1,8 +1,8 @@
 // 블록 대전 — 떨어지는 블록으로 줄을 지워 상대에게 방해 줄을 보낸다.
 // 2칸부터 4칸까지 10가지 모양, 가로 9칸 × 세로 18칸.
 
-import { startVersus } from "./versus.js?v=1";
-import { label } from "./kit.js?v=1";
+import { startVersus } from "./versus.js?v=2";
+import { label } from "./kit.js?v=2";
 
 const COLS = 9, ROWS = 18, HID = 3, TR = ROWS + HID;
 const SHAPES = [
@@ -257,10 +257,11 @@ function bot(b, mem, level, dt) {
   else act(b, "drop");
 }
 
-const G = { cols: COLS, rows: ROWS, bg: "#dfeaff", create, blank, step, act, attackIn: (b, n) => { b.pending += n; }, view, encode, decode, draw, drawNext, bot };
+const G = { cols: COLS, rows: ROWS, bg: "#dfeaff", hold: true, create, blank, step, act, attackIn: (b, n) => { b.pending += n; }, view, encode, decode, draw, drawNext, bot };
 
 export const meta = {
   local: true,
+  portrait: true,
   soloText: "봇과 1대1. 난이도를 골라 주세요.",
   modes: null,
   role: () => "",

@@ -1,8 +1,8 @@
 // 연쇄 팡 — 색 떡 두 개가 짝으로 떨어진다. 같은 색 넷을 이으면 터지고,
 // 터진 뒤 떨어진 떡이 또 터지면(연쇄) 상대에게 돌떡이 쏟아진다.
 
-import { startVersus } from "./versus.js?v=1";
-import { label } from "./kit.js?v=1";
+import { startVersus } from "./versus.js?v=2";
+import { label } from "./kit.js?v=2";
 
 const COLS = 7, ROWS = 12, HID = 2, TR = ROWS + HID, SPAWN_X = 3;
 const OFF = [[0, -1], [1, 0], [0, 1], [-1, 0]];       // 짝꿍 위치: 위, 오른쪽, 아래, 왼쪽
@@ -251,6 +251,7 @@ const G = { cols: COLS, rows: ROWS, bg: "#efe6ff", pendUnit: 1 / COLS, create, b
 
 export const meta = {
   local: true,
+  portrait: true,
   soloText: "봇과 1대1. 난이도를 골라 주세요.",
   modes: null,
   role: () => "",

@@ -1,9 +1,9 @@
 // 떡 축구 — 위에서 내려다보는 미니 축구. 몸으로 밀고, 차기 버튼으로 뻥 찬다.
 // 2분 동안 골을 더 많이 넣은 팀이 승리(5골을 먼저 넣어도 끝).
 
-import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=1";
-import { drawMochi, parseLook } from "../avatar.js?v=2";
-import { rr, label, jingle } from "./kit.js?v=1";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=2";
+import { drawMochi, parseLook } from "../avatar.js?v=3";
+import { rr, label, jingle } from "./kit.js?v=2";
 
 const W = 960, H = 540, FX0 = 48, FX1 = 912, FY0 = 58, FY1 = 502, GY0 = 205, GY1 = 355, CX = W / 2, CY = (FY0 + FY1) / 2;
 const PR = 20, BR = 12, TIME = 120 * 60, WIN_GOALS = 5, OVERTIME = 45 * 60;

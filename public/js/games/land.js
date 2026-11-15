@@ -2,9 +2,9 @@
 // 선을 긋는 동안 누가 그 선을 밟으면 탈락하고, 그 땅은 밟은 사람 것이 된다. 90초 뒤 땅이 가장 넓은 사람이 승리.
 // 판마다 바위 배치가 다르고, 아이템(방패·깃발·얼음)이 나온다.
 
-import { startHostGame, L, R, U, D } from "./hostgame.js?v=1";
-import { drawMochi, parseLook } from "../avatar.js?v=2";
-import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=1";
+import { startHostGame, L, R, U, D } from "./hostgame.js?v=2";
+import { drawMochi, parseLook } from "../avatar.js?v=3";
+import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=2";
 
 const GW = 48, GH = 27, CELL = 20, N = GW * GH, W = 960, H = 540;
 const START = 120, TIME = 90 * 60, MOVE_EVERY = 7, RESPAWN = 16, ITEM_EVERY = 400;

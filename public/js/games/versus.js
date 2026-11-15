@@ -10,8 +10,8 @@
 //   draw(ctx, 보기용 판, x, y, cell, t, mini)   drawNext(ctx, 판, x, y, cell)
 //   bot(판, mem, level, dt)
 
-import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, label, BOT_NAMES } from "./kit.js?v=1";
-import { drawMochi, parseLook } from "../avatar.js?v=2";
+import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, label, BOT_NAMES } from "./kit.js?v=2";
+import { drawMochi, parseLook } from "../avatar.js?v=3";
 
 const K_SOLO = { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", ArrowDown: "D", KeyS: "D", ArrowUp: "rot", KeyW: "rot", KeyX: "rot", KeyZ: "rot2", Space: "drop", Enter: "drop", KeyC: "hold", ShiftLeft: "hold" };
 const K_P1 = { KeyA: "L", KeyD: "R", KeyS: "D", KeyW: "rot", KeyG: "rot2", KeyF: "drop", KeyQ: "hold" };
@@ -21,8 +21,8 @@ export function startVersus(G, opts) {
   const { canvas, kind } = opts;
   const snd = sound(opts.isMuted);
   let room = opts.room || null;
-  const portrait = window.innerWidth < 640 && window.innerHeight > window.innerWidth;
-  const W = portrait ? 540 : 960, H = portrait ? 720 : 540;
+  const isPortrait = () => window.innerWidth < 640 && window.innerHeight > window.innerWidth;
+  let portrait = isPortrait(), W = portrait ? 540 : 960, H = portrait ? 720 : 540;
 
   const myRoomSlot = () => { const me = room && room.players.find((p) => p.id === room.you); return me ? me.slot : -1; };
   const hostSlot = () => { const h = room && room.players.find((p) => p.id === room.host); return h ? h.slot : -1; };
@@ -60,7 +60,7 @@ export function startVersus(G, opts) {
   const kb = keyboard(new Set([...Object.keys(K_SOLO), ...Object.keys(K_P1), ...Object.keys(K_P2)]));
   const pad = touchPad(opts.touchEl, [
     [{ id: "L", label: "◀" }, { id: "D", label: "▼" }, { id: "R", label: "▶" }],
-    [{ id: "rot", label: "돌리기", cls: "jump" }, { id: "drop", label: "뚝!", cls: "smash" }],
+    [...(G.hold ? [{ id: "hold", label: "보관" }] : []), { id: "rot", label: "돌리기", cls: "jump" }, { id: "drop", label: "뚝!", cls: "smash" }],
   ]);
   const held = (seat, action) => {
     for (const c of kb.down) if (seat.map[c] === action) return true;
@@ -223,6 +223,7 @@ export function startVersus(G, opts) {
   }
 
   function draw() {
+    portrait = isPortrait(); W = portrait ? 540 : 960; H = portrait ? 720 : 540;      // 휴대폰을 돌리면 바로 배치를 바꾼다
     const ctx = fit(canvas, W, H);
     ctx.fillStyle = G.bg || "#e9e4ff"; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = "rgba(43,45,110,.06)";

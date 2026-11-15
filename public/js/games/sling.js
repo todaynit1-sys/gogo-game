@@ -1,9 +1,9 @@
 // 새총 무너뜨리기 — 번갈아 새총으로 몸을 날려 성을 무너뜨리고 도깨비를 잡는다.
 // 세 판 동안 점수를 가장 많이 낸 사람이 승리.
 
-import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=1";
-import { drawMochi, parseLook } from "../avatar.js?v=2";
-import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=1";
+import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=2";
+import { drawMochi, parseLook } from "../avatar.js?v=3";
+import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=2";
 
 const W = 960, H = 540, GY = 470, SX = 150, SY = 372, CS = 34, NCc = 10, NR = 9, X0 = 560, BRD = 14;
 const GRAV = 0.16, START = 100, TURN = 25 * 60, ROUNDS = 3, SHOTS = 3, MAXPULL = 110, VK = 13.5 / MAXPULL;
@@ -315,9 +315,9 @@ function draw(ctx, v, env) {
     label(ctx, `${v.seats[v.turn].name} 차례 · ${Math.ceil(v.tl / 60)}초`, SX + 40, SY - 120, 18, v.turn === env.me ? "#d6336c" : "#2a2440", "rgba(255,255,255,.9)");
     const kd = KINDS[kindOf(p)];
     label(ctx, "이번 떡: " + kd.name, SX + 40, SY - 96, 17, kd.col === "#ffc93c" ? "#b07d0a" : kd.col, "rgba(255,255,255,.9)");
-    if (v.turn === env.me) label(ctx, kd.tip || "화면을 뒤로 끌었다 놓으면 발사 · 키보드: ↑↓ 각도, ←→ 힘, 스페이스", W / 2, H - 16, 17, "#2a2440", "rgba(255,255,255,.9)");
+    if (v.turn === env.me) label(ctx, kd.tip || (env.touch ? "화면을 뒤로 끌었다 놓으면 발사. 멀리 끌수록 세게" : "화면을 뒤로 끌었다 놓으면 발사 · 키보드: ↑↓ 각도, ←→ 힘, 스페이스"), W / 2, H - 16, 17, "#2a2440", "rgba(255,255,255,.9)");
   }
-  if (v.ph === 1 && v.shot && v.shot.k === 1 && v.shot.o === env.me) label(ctx, "스페이스·터치로 지금 터뜨리기!", W / 2, H - 16, 18, "#ff5d73", "#fff");
+  if (v.ph === 1 && v.shot && v.shot.k === 1 && v.shot.o === env.me) label(ctx, env.touch ? "화면을 톡 치면 지금 터져요!" : "스페이스나 클릭으로 지금 터뜨리기!", W / 2, H - 16, 18, "#ff5d73", "#fff");
   if (v.over) {
     const w = v.over.w;
     label(ctx, w < 0 ? "무승부!" : w === env.me ? "이겼다!" : `${v.seats[w].name} 승리!`, W / 2, H / 2 - 30, 70, "#ffc93c", "#2b2d6e");

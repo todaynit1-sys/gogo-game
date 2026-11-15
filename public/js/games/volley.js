@@ -2,8 +2,8 @@
 // 게임 계산은 "방장" 한 명의 브라우저가 맡고, 나머지는 결과를 받아 그린다.
 // 혼자 하기·한 키보드 2인은 서버 없이 돌아간다.
 
-import { drawMochi as paintMochi, parseLook } from "../avatar.js?v=2";
-import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, BOT_NAMES, SEAT_DARK } from "./kit.js?v=1";
+import { drawMochi as paintMochi, parseLook } from "../avatar.js?v=3";
+import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, BOT_NAMES, SEAT_DARK } from "./kit.js?v=2";
 
 const W = 960, H = 540, GROUND = 470, NET_X = 480, NET_HW = 7, NET_TOP = GROUND - 165;
 const PR = 40, BR = 24, DT = 1 / 60;

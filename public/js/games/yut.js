@@ -1,9 +1,9 @@
 // 윷놀이 — 윷을 던져 나온 만큼 말을 옮긴다. 윷·모가 나오거나 상대 말을 잡으면 한 번 더.
 // 내 말끼리 만나면 업혀서 같이 간다. 말을 모두 먼저 내보내는 사람이 승리.
 
-import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=1";
-import { drawMochi, parseLook } from "../avatar.js?v=2";
-import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=1";
+import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=2";
+import { drawMochi, parseLook } from "../avatar.js?v=3";
+import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=2";
 
 const W = 960, H = 540, BX = 70, BY = 60, S = 420, START = 80, THROW_T = 15 * 60, PICK_T = 20 * 60, HOMEN = 99;
 const NAME = { "-1": "빽도", 1: "도", 2: "개", 3: "걸", 4: "윷", 5: "모" };
@@ -35,7 +35,7 @@ const THROW_BTN = [736, 470, 186, 56];
 const chipRect = (j) => [540 + j * 72, 410, 64, 42];
 const waitRect = (o) => [PX + 150, 22 + o * ROW_H + 6, 190, 44];
 const inRect = (pt, r) => pt[0] >= r[0] && pt[0] <= r[0] + r[2] && pt[1] >= r[1] && pt[1] <= r[1] + r[3];
-const near = (pt, q, r = 22) => Math.hypot(pt[0] - q[0], pt[1] - q[1]) < r;
+const near = (pt, q, r = 30) => Math.hypot(pt[0] - q[0], pt[1] - q[1]) < r;
 
 const node = (pc) => (pc.f ? -2 : pc.i < 0 ? -1 : TR[pc.t][pc.i]);
 
@@ -356,8 +356,8 @@ function draw(ctx, v, env) {
   let tip = "";
   if (v.tick < START) tip = "준비!";
   else if (v.over) tip = "";
-  else if (v.ph === 0) tip = mineTurn ? `스페이스 또는 [윷 던지기] · ${Math.ceil(v.tl / 60)}초` : `${v.seats[o].name} 차례`;
-  else if (v.ph === 2) tip = mineTurn ? `말을 누르면 옮겨요 · ↑↓ 결과 · ←→ 말 · 스페이스 · ${Math.ceil(v.tl / 60)}초` : `${v.seats[o].name}이(가) 말을 고르는 중`;
+  else if (v.ph === 0) tip = mineTurn ? `${env.touch ? "[윷 던지기]를 눌러요" : "스페이스 또는 [윷 던지기]"} · ${Math.ceil(v.tl / 60)}초` : `${v.seats[o].name} 차례`;
+  else if (v.ph === 2) tip = mineTurn ? `${env.touch ? "옮길 말을 눌러요 · 결과는 아래 칩으로" : "말을 누르면 옮겨요 · ↑↓ 결과 · ←→ 말 · 스페이스"} · ${Math.ceil(v.tl / 60)}초` : `${v.seats[o].name}이(가) 말을 고르는 중`;
   if (tip) label(ctx, tip, 540, 300, 15, mineTurn ? "#d6336c" : "#6b6480", null, "left");
   if (v.note && v.nt < 120) label(ctx, v.note, BX + S / 2, BY + S / 2 - 40, 24, "#ff5d73", "#fff");
   if (v.tick < START) label(ctx, "준비!", BX + S / 2, BY + S / 2 + 20, 60, "#ff5d73", "#fff");

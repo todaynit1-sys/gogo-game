@@ -1,9 +1,9 @@
 // 알까기 — 번갈아 내 알을 튕겨 상대 알을 판 밖으로 밀어낸다. 마지막까지 알이 남은 사람이 승리.
 // 차례제라서 온라인에서도 끊김 없이 할 수 있다.
 
-import { startHostGame, L, R, U, D, A, P, B } from "./hostgame.js?v=1";
-import { drawMochi, parseLook } from "../avatar.js?v=2";
-import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=1";
+import { startHostGame, L, R, U, D, A, P, B } from "./hostgame.js?v=2";
+import { drawMochi, parseLook } from "../avatar.js?v=3";
+import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=2";
 
 const W = 960, H = 540, BX = 250, BY = 40, BS = 460, SR = 17, FR = 0.972, MAXP = 120, VK = 11.5 / MAXP, START = 90, TURN = 20 * 60;
 const BOARDS = [
@@ -192,7 +192,7 @@ function draw(ctx, v, env) {
   if (v.tick < START) label(ctx, "준비!", W / 2, H / 2, 80, "#ff5d73", "#fff");
   else if (aiming) {
     label(ctx, `${v.seats[v.turn].name} 차례 · ${Math.ceil(v.tl / 60)}초`, W / 2, 26, 19, v.turn === env.me ? "#d6336c" : dark ? "#fff" : "#2b2d6e", dark ? null : "rgba(255,255,255,.9)");
-    if (v.turn === env.me) label(ctx, "내 알을 눌러 뒤로 끌었다 놓기 · 키보드: Q 알 바꾸기, ←→ 방향, ↑↓ 세기, 스페이스", W / 2, H - 10, 16, dark ? "#fff" : "#2a2440", dark ? null : "rgba(255,255,255,.9)");
+    if (v.turn === env.me) label(ctx, env.touch ? "내 알을 눌러 뒤로 끌었다 놓으면 튕겨요" : "내 알을 눌러 뒤로 끌었다 놓기 · 키보드: Q 알 바꾸기, ←→ 방향, ↑↓ 세기, 스페이스", W / 2, H - 10, 16, dark ? "#fff" : "#2a2440", dark ? null : "rgba(255,255,255,.9)");
   }
   if (v.over) {
     const w = v.over.w;

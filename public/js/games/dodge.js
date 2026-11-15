@@ -1,9 +1,9 @@
 // 떡 피구 — 코트를 반으로 나눠 공을 던져 상대를 맞힌다. 맞으면 하트가 하나 줄고,
 // 날아오는 공을 제때 잡으면 던진 사람 하트가 준다. 상대 팀을 모두 탈락시키면 승리.
 
-import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=1";
-import { drawMochi, parseLook } from "../avatar.js?v=2";
-import { rr, label, jingle } from "./kit.js?v=1";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=2";
+import { drawMochi, parseLook } from "../avatar.js?v=3";
+import { rr, label, jingle } from "./kit.js?v=2";
 
 const W = 960, H = 540, FX0 = 60, FX1 = 900, FY0 = 74, FY1 = 500, MID = 480, CY = (FY0 + FY1) / 2;
 const PR = 20, BR = 11, START = 100, TIME = 150 * 60, SPEED = 12.5, LIVE_MIN = 5, HOLD_MAX = 300, CATCH_WIN = 14;
@@ -274,7 +274,7 @@ function draw(ctx, v, env) {
   label(ctx, `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`, W / 2, 42, 22, sec > 10 ? "#2b2d6e" : "#ff5d73", null);
   label(ctx, c.name, W - 14, H - 12, 14, "#fff", "rgba(43,45,110,.7)", "right");
   for (const q of v.msg) if (q.t < 60) label(ctx, q.text, q.x, q.y - q.t * 0.6, 22, q.col, "#fff");
-  if (env.me >= 0 && v.tick < 480 && !v.over) label(ctx, `나는 ${TEAM_NAME[env.me % 2]} · 스페이스: 공을 들면 던지기, 없으면 잡기 · Q: 대시`, W / 2, H - 12, 16, "#fff", "rgba(43,45,110,.85)");
+  if (env.me >= 0 && v.tick < 480 && !v.over) label(ctx, env.touch ? `나는 ${TEAM_NAME[env.me % 2]} · [던지기]: 공을 들면 던지기, 없으면 잡기 · [대시]: 돌진` : `나는 ${TEAM_NAME[env.me % 2]} · 스페이스: 공을 들면 던지기, 없으면 잡기 · Q: 대시`, W / 2, H - 12, 16, "#fff", "rgba(43,45,110,.85)");
   if (v.tick < START) label(ctx, "준비!", W / 2, CY + 20, 70, "#fff", "#2b2d6e");
   if (v.over) {
     const w = v.over.w, mine = env.me >= 0 ? env.me % 2 : -1;

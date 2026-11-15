@@ -1,9 +1,9 @@
 // 미니 당구 — 번갈아 흰 공(내 떡)을 쳐서 색 공을 구멍에 넣는다.
 // 넣으면 한 번 더, 흰 공이 빠지면 1점 깎이고 차례가 넘어간다. 공을 다 넣었을 때 점수가 가장 높으면 승리.
 
-import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=1";
-import { drawMochi, parseLook } from "../avatar.js?v=2";
-import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=1";
+import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=2";
+import { drawMochi, parseLook } from "../avatar.js?v=3";
+import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=2";
 
 const W = 960, H = 540, TX0 = 150, TY0 = 104, TW = 660, TH = 330, BR = 11, FR = 0.986, START = 90, TURN = 25 * 60, MAXP = 130, VK = 14 / MAXP;
 const PK = [[TX0, TY0, 21], [TX0 + TW / 2, TY0 - 2, 19], [TX0 + TW, TY0, 21], [TX0, TY0 + TH, 21], [TX0 + TW / 2, TY0 + TH + 2, 19], [TX0 + TW, TY0 + TH, 21]];
@@ -277,7 +277,7 @@ function draw(ctx, v, env) {
   if (v.tick < START) label(ctx, "준비!", W / 2, TY0 + TH / 2 + 20, 70, "#fff", "#2b2d6e");
   else if (aiming) {
     label(ctx, `${v.seats[v.turn].name} 차례 · ${Math.ceil(v.tl / 60)}초`, W / 2, H - 38, 19, v.turn === env.me ? "#d6336c" : "#2b2d6e", null);
-    if (v.turn === env.me) label(ctx, "화면을 뒤로 끌었다 놓으면 쳐요 · 키보드: ←→ 방향, ↑↓ 세기, 스페이스", W / 2, H - 13, 16, "#6b6480", null);
+    if (v.turn === env.me) label(ctx, env.touch ? "화면을 뒤로 끌었다 놓으면 쳐요. 멀리 끌수록 세게" : "화면을 뒤로 끌었다 놓으면 쳐요 · 키보드: ←→ 방향, ↑↓ 세기, 스페이스", W / 2, H - 13, 16, "#6b6480", null);
   }
   label(ctx, f.name, W - 14, H - 12, 13, "#6b6480", null, "right");
   if (v.over) {

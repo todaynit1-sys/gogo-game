@@ -11,8 +11,8 @@
 //   multiDir: 대각선 이동 허용   pointer: 화면 끌기 조준 사용 (step 의 세 번째 인자로 끈 방향이 온다)
 //   noPad: 방향 버튼 없이 터치 끌기만 쓰는 게임
 
-import { sound, makeLoop, fit, keyboard, touchPad, label, BOT_NAMES } from "./kit.js?v=1";
-import { lookStr } from "../avatar.js?v=2";
+import { sound, makeLoop, fit, keyboard, touchPad, label, BOT_NAMES } from "./kit.js?v=2";
+import { lookStr } from "../avatar.js?v=3";
 
 export const L = 1, R = 2, U = 4, D = 8, A = 16, P = 32, B = 64;   // P = 화면을 끌고 있는 중
 const DIRS = L | R | U | D;
@@ -46,6 +46,7 @@ export function startHostGame(G, opts) {
   canvas.addEventListener("pointerup", pu); canvas.addEventListener("pointercancel", pu);
   const myAim = () => ({ x: drag.x, y: drag.y, sx: Math.round(drag.sx), sy: Math.round(drag.sy) });
 
+  const touchUI = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
   const iAmHost = () => kind !== "online" || (room && room.host === room.you);
   const mySlot = () => { if (kind !== "online") return 0; const me = room.players.find((p) => p.id === room.you); return me ? me.slot : -1; };
 
@@ -127,7 +128,7 @@ export function startHostGame(G, opts) {
     if (!v) { ctx.fillStyle = "#fff4dc"; ctx.fillRect(0, 0, G.W, G.H); label(ctx, "연결하는 중…", G.W / 2, G.H / 2, 30, "#2b2d6e"); return; }
     const host = iAmHost();
     const alpha = host ? 1 : Math.max(0, Math.min(1, (performance.now() - snapAt) / 1000 / snapGap));
-    G.draw(ctx, v, { me: meIndex(v), t, prev: host ? null : prev, alpha, host });
+    G.draw(ctx, v, { me: meIndex(v), t, prev: host ? null : prev, alpha, host, touch: touchUI });
     if (kind === "online" && meIndex(v) < 0) label(ctx, "관전 중 — 다음 판에 참가해요", G.W / 2, G.H - 14, 18, "#2b2d6e");
   }
 
