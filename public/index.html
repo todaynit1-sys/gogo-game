@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=2">
+<link rel="stylesheet" href="/css/app.css?v=3">
 </head>
 <body>
 <header class="top">
@@ -20,7 +20,7 @@
   <div class="top-right">
     <span class="online" id="online" hidden></span>
     <button class="chip" id="muteBtn" type="button" aria-pressed="false">소리 켬</button>
-    <button class="chip chip-heart" id="donateBtn" type="button">후원하기</button>
+    <button class="chip chip-heart" id="donateBtn" type="button" hidden>후원하기</button>
   </div>
 </header>
 
@@ -78,14 +78,14 @@
       </div>
       <div class="mode">
         <h3>혼자 연습</h3>
-        <p>봇과 1대1. 난이도를 골라 주세요.</p>
+        <p id="soloText">봇과 겨뤄요. 난이도를 골라 주세요.</p>
         <div class="row wrap">
           <button class="btn btn-line" data-solo="easy" type="button">쉬움</button>
           <button class="btn btn-line" data-solo="normal" type="button">보통</button>
           <button class="btn btn-line" data-solo="hard" type="button">어려움</button>
         </div>
       </div>
-      <div class="mode pc-only">
+      <div class="mode pc-only" id="localCard">
         <h3>한 키보드로 둘이</h3>
         <p>옆자리 친구와 같은 컴퓨터에서.</p>
         <button class="btn btn-line" id="local2" type="button">2인 대전</button>
@@ -93,12 +93,7 @@
     </div>
     <div class="howto">
       <h3>조작법</h3>
-      <ul>
-        <li><b>이동·점프</b> 방향키 또는 A·D·W</li>
-        <li><b>강타</b> 스페이스 또는 F — 점프한 채로 공을 맞히면 내리꽂아요</li>
-        <li><b>한 키보드 2인</b> 1P: A·D·W + F / 2P: 방향키 + Enter</li>
-        <li><b>휴대폰</b> 화면 아래 버튼으로 조작해요</li>
-      </ul>
+      <ul id="howList"></ul>
     </div>
   </section>
 
@@ -114,13 +109,13 @@
     </div>
     <div class="seats" id="seats"></div>
     <div class="roomopts" id="roomOpts">
-      <div class="opt">
-        <span class="optlabel">경기 방식</span>
-        <div class="seg" id="modeSeg">
-          <button type="button" data-mode="0">자동</button>
-          <button type="button" data-mode="2">1대1</button>
-          <button type="button" data-mode="4">2대2</button>
-        </div>
+      <div class="opt" id="gameOpt">
+        <span class="optlabel">게임</span>
+        <div class="chips" id="gamePick"></div>
+      </div>
+      <div class="opt" id="modeOpt">
+        <span class="optlabel" id="modeLabel">경기 방식</span>
+        <div class="seg" id="modeSeg"></div>
       </div>
       <label class="opt check"><input type="checkbox" id="pubChk"> <span>빠른 대전으로 아무나 들어올 수 있게</span></label>
     </div>
@@ -162,6 +157,6 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script type="module" src="/js/app.js?v=5"></script>
+<script type="module" src="/js/app.js?v=7"></script>
 </body>
 </html>

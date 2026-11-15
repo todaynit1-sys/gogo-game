@@ -5,7 +5,7 @@
 import { DurableObject } from "cloudflare:workers";
 
 const MAX_PLAYERS = 4;
-const GAMES = ["volley"];
+const GAMES = ["volley", "bomb", "land", "blocks", "chain", "cannon", "soccer", "sling"];
 const CODE_RE = /^[A-Z]{4}$/;
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // 헷갈리는 I, O 제외
 
@@ -163,6 +163,14 @@ export class Room extends DurableObject {
       }
       return;
     }
+    // 'b…' 누구나 보내는 알림(각자 판을 돌리는 게임용) → 나머지 모두에게, 자리 번호를 붙여서
+    if (c === "b") {
+      const out = "b" + me.slot + msg.slice(1);
+      for (const w of this.sockets(ws)) {
+        try { w.send(out); } catch {}
+      }
+      return;
+    }
     if (c !== "{") return;
     let d;
     try { d = JSON.parse(msg); } catch { return; }
@@ -179,8 +187,9 @@ export class Room extends DurableObject {
     }
     if (!isHost) return;
     if (d.t === "set") {
-      if (GAMES.includes(d.game)) this.meta.game = d.game;
-      if ([0, 2, 4].includes(d.mode)) this.meta.mode = d.mode;
+      if (this.meta.phase !== "lobby") return;
+      if (GAMES.includes(d.game) && d.game !== this.meta.game) { this.meta.game = d.game; this.meta.mode = 0; }
+      if (Number.isInteger(d.mode) && d.mode >= 0 && d.mode <= 9) this.meta.mode = d.mode;
       if (typeof d.pub === "boolean") this.meta.pub = d.pub;
     } else if (d.t === "start") {
       this.meta.phase = "play";

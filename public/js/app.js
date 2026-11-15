@@ -1,6 +1,5 @@
 // 한판 오락실 — 로비, 방 대기실, 게임 실행
 import { SITE, GAMES } from "./config.js";
-import { startVolley } from "./games/volley.js?v=3";
 import { BODY, FACES, HATS, drawMochi, parseLook, lookStr, randomLook } from "./avatar.js?v=1";
 
 const $ = (id) => document.getElementById(id);
@@ -14,6 +13,12 @@ let look = store.get("hp_look") ? parseLook(store.get("hp_look")) : randomLook()
 let current = GAMES[0];   // 고른 게임
 let ws = null, room = null, game = null, pingTimer = null, leaving = false;
 let offline = null;       // 혼자/로컬 다시 하기용 설정
+let gameId = null, sawLobby = false, overPending = false;
+
+// 게임 모듈은 고를 때 불러온다
+const VER = "?v=5";
+const mods = {};
+const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" + VER));
 
 // ── 공통 ──
 function show(name) {
@@ -55,31 +60,44 @@ function renderCards() {
   }
 }
 
-function openGame(g) {
+async function openGame(g) {
   current = g;
   $("gName").textContent = g.name; $("gDesc").textContent = g.desc;
   $("gThumb").innerHTML = THUMBS[g.id] || "";
+  $("howList").innerHTML = "";
   show("game");
+  let mod; try { mod = await loadMod(g.id); } catch { return toast("게임을 불러오지 못했어요. 새로고침해 주세요"); }
+  if (current !== g) return;
+  $("soloText").textContent = mod.meta.soloText;
+  $("localCard").hidden = !mod.meta.local;
+  for (const [k, v] of mod.meta.howto) {
+    const li = document.createElement("li"), b = document.createElement("b");
+    b.textContent = k; li.append(b, " " + v); $("howList").append(li);
+  }
 }
 
 // ── 오프라인(혼자·한 키보드) ──
-function playOffline(cfg) {
+async function playOffline(cfg) {
   offline = cfg;
   stopGame();
+  let mod; try { mod = await loadMod(current.id); } catch { return toast("게임을 불러오지 못했어요. 새로고침해 주세요"); }
   $("result").hidden = true;
-  $("playInfo").textContent = cfg.kind === "solo" ? "혼자 연습 · " + { easy: "쉬움", normal: "보통", hard: "어려움" }[cfg.level] : "한 키보드 2인";
+  $("playInfo").textContent = current.name + " · " + (cfg.kind === "solo" ? "혼자 · " + { easy: "쉬움", normal: "보통", hard: "어려움" }[cfg.level] : "한 키보드 2인");
   show("play");
-  game = startVolley({
-    canvas: $("cv"), touchEl: $("touch"), kind: cfg.kind, mode: 2, level: cfg.level,
+  game = mod.start({
+    canvas: $("cv"), touchEl: $("touch"), kind: cfg.kind, level: cfg.level,
     myName: myName() || "나", look, isMuted: () => muted,
-    onOver: () => { $("resTitle").textContent = "한 판 더 할까요?"; $("result").hidden = false; },
+    onOver: (r) => { $("resTitle").textContent = (r && r.title) || "한 판 더 할까요?"; $("result").hidden = false; },
   });
+  gameId = current.id;
 }
 
-function stopGame() { if (game) { game.stop(); game = null; } }
+window.__hp = () => (game && game.peek ? game.peek() : null);   // 점검용
+function stopGame() { if (game) { game.stop(); game = null; gameId = null; } }
 
 // ── 온라인 ──
-const BASE = (SITE.server || "").replace(/\/$/, "");
+// 내 컴퓨터에서 개발할 때는 같이 뜬 로컬 서버를 쓴다
+const BASE = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? "" : (SITE.server || "").replace(/\/$/, "");
 let serverOK = null; // 대전 서버가 살아 있는지 (null = 아직 모름)
 function needServer() {
   if (serverOK !== false) return true;
@@ -94,7 +112,7 @@ async function api(path) {
 
 function connect(code, { pub = false } = {}) {
   disconnect();
-  leaving = false;
+  leaving = false; sawLobby = false; overPending = false;
   const q = new URLSearchParams({ name: myName(), look: lookStr(look), game: current.id, pub: pub ? "1" : "0" });
   const wsBase = BASE ? BASE.replace(/^http/, "ws") : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
   const sock = new WebSocket(`${wsBase}/ws/${code}?${q}`);
@@ -102,7 +120,7 @@ function connect(code, { pub = false } = {}) {
   sock.onmessage = (e) => {
     const m = e.data;
     if (typeof m !== "string" || m === "pong") return;
-    if (m[0] === "s" || m[0] === "i") { if (game) game.onNet(m); return; }
+    if (m[0] === "s" || m[0] === "i" || m[0] === "b") { if (game) game.onNet(m); return; }
     let d; try { d = JSON.parse(m); } catch { return; }
     if (d.t === "full") { leaving = true; toast("방이 꽉 찼어요 (최대 4명)"); goHome(); }
     else if (d.t === "room") onRoom(d);
@@ -125,31 +143,38 @@ function disconnect() {
 
 function send(x) { if (ws && ws.readyState === 1) ws.send(typeof x === "string" ? x : JSON.stringify(x)); }
 
-function onRoom(d) {
+async function onRoom(d) {
   room = d;
   const g = GAMES.find((x) => x.id === d.game); if (g) current = g;
   history.replaceState(null, "", "?r=" + d.code);
+  let mod; try { mod = await loadMod(d.game); } catch { return toast("게임을 불러오지 못했어요. 새로고침해 주세요"); }
+  if (room !== d) return;                 // 불러오는 사이에 더 새로운 방 정보가 왔다
   if (d.phase === "play") {
-    if (!game) {
-      $("result").hidden = true;
-      $("playInfo").textContent = "방 " + d.code;
-      show("play");
-      const mode = d.mode || (d.players.length >= 3 ? 4 : 2);
-      game = startVolley({
-        canvas: $("cv"), touchEl: $("touch"), kind: "online", mode, room: d,
-        send, isMuted: () => muted,
-        onOver: () => send({ t: "end" }),
-      });
-    } else game.setRoom(d);
-  } else {
+    if (game && gameId === d.game) {
+      game.setRoom(d);
+      if (overPending && d.host === d.you) { overPending = false; send({ t: "end" }); }   // 끝난 판의 방장을 넘겨받았다
+      return;
+    }
     stopGame();
-    renderRoom();
+    $("result").hidden = true;
+    $("playInfo").textContent = current.name + " · 방 " + d.code;
+    show("play");
+    overPending = false;
+    game = mod.start({
+      canvas: $("cv"), touchEl: $("touch"), kind: "online", mode: d.mode, room: d, late: !sawLobby,
+      myName: myName() || "나", look, send, isMuted: () => muted,
+      onOver: () => { if (room && room.host === room.you) send({ t: "end" }); else overPending = true; },
+    });
+    gameId = d.game;
+  } else {
+    sawLobby = true; overPending = false;
+    stopGame();
+    renderRoom(mod.meta);
     show("room");
   }
 }
 
-const SEAT_COLORS = ["#ff9db5", "#9bd88a", "#ffd66b", "#8ecbff"];
-function renderRoom() {
+function renderRoom(meta) {
   const d = room, host = d.host === d.you;
   $("rGame").textContent = current.name;
   $("rCode").textContent = d.code;
@@ -163,19 +188,36 @@ function renderRoom() {
       drawMochi(dot.getContext("2d"), 66, 80, 46, parseLook(p.look, i));
       const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = p.name;
       const role = document.createElement("span"); role.className = "role";
-      role.textContent = [p.id === d.you ? "나" : "", p.id === d.host ? "방장" : "", i % 2 ? "오른쪽 팀" : "왼쪽 팀"].filter(Boolean).join(" · ");
+      role.textContent = [p.id === d.you ? "나" : "", p.id === d.host ? "방장" : "", meta.role(i, d.mode)].filter(Boolean).join(" · ");
       el.append(dot, nm, role);
     } else el.textContent = "빈자리";
     seats.append(el);
   }
-  for (const b of $("modeSeg").children) { b.setAttribute("aria-pressed", String(+b.dataset.mode === d.mode)); b.disabled = !host; }
+  // 게임 바꾸기 (방장만)
+  const pick = $("gamePick"); pick.innerHTML = "";
+  for (const g of GAMES.filter((x) => x.ready)) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chipbtn"; b.textContent = g.name; b.disabled = !host;
+    b.setAttribute("aria-pressed", String(g.id === d.game));
+    b.addEventListener("click", () => send({ t: "set", game: g.id }));
+    pick.append(b);
+  }
+  // 경기 방식
+  const seg = $("modeSeg"); seg.innerHTML = "";
+  $("modeOpt").hidden = !meta.modes;
+  if (meta.modes) {
+    $("modeLabel").textContent = meta.modeLabel || "경기 방식";
+    for (const [val, text] of meta.modes) {
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = text; b.disabled = !host;
+      b.setAttribute("aria-pressed", String(val === d.mode));
+      b.addEventListener("click", () => send({ t: "set", mode: val }));
+      seg.append(b);
+    }
+  }
   $("pubChk").checked = d.pub; $("pubChk").disabled = !host;
   $("startBtn").hidden = !host;
-  const n = d.players.length;
-  const mode = d.mode || (n >= 3 ? 4 : 2);
-  $("roomHint").textContent = host
-    ? (n === 1 ? "혼자 시작하면 봇과 붙어요. 친구를 기다리려면 초대 링크를 보내세요." : `${n}명 · ${mode === 2 ? "1대1" : "2대2"}로 시작해요.` + (mode === 2 && n > 2 ? " 3번째부터는 관전이에요." : mode === 4 && n < 4 ? " 빈자리는 봇이 채워요." : ""))
-    : "방장이 시작하기를 기다리는 중이에요.";
+  $("roomHint").textContent = host ? meta.hint(d.players.length, d.mode) : "방장이 게임을 고르고 시작하기를 기다리는 중이에요.";
 }
 
 function goHome() {
@@ -284,6 +326,7 @@ function init() {
   setMute();
   $("muteBtn").addEventListener("click", () => { muted = !muted; store.set("hp_muted", muted ? "1" : "0"); setMute(); });
   $("goHome").addEventListener("click", goHome);
+  $("donateBtn").hidden = !SITE.donate.show;
   $("donateBtn").addEventListener("click", openDonate);
   $("dClose").addEventListener("click", () => ($("donateModal").hidden = true));
   $("donateModal").addEventListener("click", (e) => { if (e.target === $("donateModal")) $("donateModal").hidden = true; });
@@ -311,7 +354,6 @@ function init() {
 
   $("leaveRoom").addEventListener("click", goHome);
   $("copyLink").addEventListener("click", () => room && copy(`${location.origin}/?r=${room.code}`, "초대 링크를 복사했어요. 친구에게 보내 주세요"));
-  for (const b of $("modeSeg").children) b.addEventListener("click", () => send({ t: "set", mode: +b.dataset.mode }));
   $("pubChk").addEventListener("change", (e) => send({ t: "set", pub: e.target.checked }));
   $("startBtn").addEventListener("click", () => send({ t: "start" }));
 

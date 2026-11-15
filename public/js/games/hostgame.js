@@ -1,0 +1,132 @@
+// 한 화면 대전 틀 — 모두가 같은 판에서 움직이는 게임(폭탄 미로, 땅따먹기)이 함께 쓴다.
+// 게임 계산은 방장 브라우저가 하고, 나머지는 조작만 보내고 결과를 받아 그린다.
+//
+// 게임 정의 G:
+//   W, H, sendEvery(몇 틱마다 보낼지), action(터치 버튼 이름 또는 null), overDelay
+//   bots: { solo, local }, fill(mode, 사람 수) → 온라인에서 채울 봇 수
+//   init(seats, { mode, level }) → 상태          step(상태, 조작[])
+//   bot(상태, i, mem, level) → 조작              draw(ctx, 보기, env)
+//   fx(보기, 기억, snd)                           title(보기, 내 번호)
+//   pack(상태) → 보낼 것   unpack(받은 것) → 보기   viewOf(상태) → 보기   adopt(보기) → 상태
+
+import { sound, makeLoop, fit, keyboard, touchPad, label, BOT_NAMES } from "./kit.js?v=1";
+import { lookStr } from "../avatar.js?v=1";
+
+export const L = 1, R = 2, U = 4, D = 8, A = 16;
+const DIRS = L | R | U | D;
+const P1 = { KeyA: L, KeyD: R, KeyW: U, KeyS: D, KeyF: A, KeyG: A };
+const P2 = { ArrowLeft: L, ArrowRight: R, ArrowUp: U, ArrowDown: D, Enter: A, Slash: A, ShiftRight: A, Numpad0: A };
+const SOLO = { ...P1, ...P2, Space: A };
+const TOUCH = { L, R, U, D, A };
+
+export function startHostGame(G, opts) {
+  const { canvas, kind } = opts;
+  const snd = sound(opts.isMuted);
+  let room = opts.room || null;
+  let sim = null, snap = null, prev = null, snapAt = 0, snapGap = 0.1, overSent = false, lastSent = -1, t = 0;
+  const remote = [0, 0, 0, 0], mem = [{}, {}, {}, {}], fxMem = {};
+  const level = opts.level || "normal";
+
+  const kb = keyboard(new Set(Object.keys(SOLO)));
+  const pad = touchPad(opts.touchEl, G.action ? [{ dpad: true }, [{ id: "A", label: G.action, cls: "smash big" }]] : [{ dpad: true }]);
+
+  const iAmHost = () => kind !== "online" || (room && room.host === room.you);
+  const mySlot = () => { if (kind !== "online") return 0; const me = room.players.find((p) => p.id === room.you); return me ? me.slot : -1; };
+
+  // 방향은 가장 나중에 누른 키가 이긴다
+  function maskOf(map, withTouch) {
+    let dir = 0, act = 0;
+    for (const c of kb.order) { const b = map[c]; if (!b) continue; if (b & DIRS) dir = b; else act |= b; }
+    if (withTouch) for (const c of pad.order) { const b = TOUCH[c]; if (b & DIRS) dir = b; else act |= b; }
+    return dir | act;
+  }
+
+  function buildSeats() {
+    const seats = [], bot = () => seats.push({ c: "b", name: BOT_NAMES[seats.length % 4], look: "" });
+    if (kind === "solo") {
+      seats.push({ c: "k0", name: opts.myName, look: opts.look ? lookStr(opts.look) : "" });
+      for (let i = 0; i < G.bots.solo; i++) bot();
+    } else if (kind === "local") {
+      seats.push({ c: "k1", name: "1P", look: opts.look ? lookStr(opts.look) : "" }, { c: "k2", name: "2P", look: "" });
+      for (let i = 0; i < G.bots.local; i++) bot();
+    } else {
+      const ps = [...room.players].sort((a, b) => a.slot - b.slot).slice(0, 4);
+      for (const p of ps) seats.push({ c: "r", slot: p.slot, name: p.name, look: p.look || "" });
+      const n = Math.min(4 - seats.length, G.fill(room.mode | 0, ps.length));
+      for (let i = 0; i < n; i++) bot();
+    }
+    return seats;
+  }
+
+  function inputs(s) {
+    return s.seats.map((seat, i) => {
+      if (seat.c === "k0") return maskOf(SOLO, true);
+      if (seat.c === "k1") return maskOf(P1, false);
+      if (seat.c === "k2") return maskOf(P2, false);
+      if (seat.c === "r") {
+        if (seat.slot === mySlot()) return maskOf(SOLO, true);
+        if (room.players.some((p) => p.slot === seat.slot)) return remote[seat.slot];
+        return G.bot(s, i, mem[i], "normal");          // 나간 사람 자리는 봇이 이어받는다
+      }
+      return G.bot(s, i, mem[i], kind === "online" ? "normal" : level);
+    });
+  }
+
+  const meIndex = (v) => {
+    if (kind === "local") return -1;
+    if (kind === "solo") return v.seats.findIndex((x) => x.c === "k0");
+    const slot = mySlot();
+    return v.seats.findIndex((x) => x.c === "r" && x.slot === slot);
+  };
+  const viewNow = () => (iAmHost() ? (sim ? (G.viewOf ? G.viewOf(sim) : sim) : null) : snap);
+
+  function tick(dt) {
+    t += dt;
+    if (iAmHost()) {
+      if (!sim) sim = snap ? (G.adopt ? G.adopt(snap) : snap) : G.init(buildSeats(), { mode: room ? room.mode | 0 : 0, level });
+      G.step(sim, inputs(sim));
+      if (kind === "online" && sim.tick % G.sendEvery === 0) opts.send("s" + JSON.stringify(G.pack ? G.pack(sim) : sim));
+      if (sim.over && sim.over.t > (G.overDelay || 240) && !overSent) { overSent = true; opts.onOver({ title: G.title(sim, meIndex(sim)) }); }
+    } else {
+      sim = null;
+      const m = snap && meIndex(snap) >= 0 ? maskOf(SOLO, true) : 0;
+      if (m !== lastSent) { lastSent = m; opts.send("i" + m); }
+    }
+    const v = viewNow();
+    if (v && G.fx) G.fx(v, fxMem, snd);
+  }
+
+  function draw() {
+    const ctx = fit(canvas, G.W, G.H);
+    const v = viewNow();
+    if (!v) { ctx.fillStyle = "#fff4dc"; ctx.fillRect(0, 0, G.W, G.H); label(ctx, "연결하는 중…", G.W / 2, G.H / 2, 30, "#2b2d6e"); return; }
+    const host = iAmHost();
+    const alpha = host ? 1 : Math.max(0, Math.min(1, (performance.now() - snapAt) / 1000 / snapGap));
+    G.draw(ctx, v, { me: meIndex(v), t, prev: host ? null : prev, alpha, host });
+    if (kind === "online" && meIndex(v) < 0) label(ctx, "관전 중 — 다음 판에 참가해요", G.W / 2, G.H - 14, 18, "#2b2d6e");
+  }
+
+  const stopLoop = makeLoop(tick, draw);
+
+  return {
+    onNet(msg) {
+      if (msg[0] === "s") {
+        if (iAmHost()) return;
+        try {
+          const o = JSON.parse(msg.slice(1)), now = performance.now();
+          prev = snap; snap = G.unpack ? G.unpack(o) : o;
+          if (snapAt) snapGap = Math.max(0.03, Math.min(0.4, snapGap * 0.7 + ((now - snapAt) / 1000) * 0.3));
+          snapAt = now;
+        } catch {}
+      } else if (msg[0] === "i") { const slot = +msg[1]; if (slot >= 0 && slot < 4) remote[slot] = parseInt(msg.slice(2), 10) & 31; }
+    },
+    setRoom(r) {
+      const wasHost = iAmHost();
+      room = r;
+      if (!wasHost && iAmHost() && snap) sim = G.adopt ? G.adopt(snap) : snap;
+      lastSent = -1;
+    },
+    stop() { stopLoop(); kb.stop(); pad.stop(); },
+    peek() { const v = iAmHost() ? sim : snap; return { host: iAmHost(), tick: v ? v.tick : -1, seats: v ? v.seats.length : 0, over: !!(v && v.over) }; },
+  };
+}
