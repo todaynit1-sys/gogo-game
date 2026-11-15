@@ -26,6 +26,13 @@ const THEMES = [
   { name: "눈밭", sky: ["#a9d8f5", "#f3fbff"], soil: ["#cfe3ef", "#8fb0c8"], grass: "#ffffff", edge: "#b9d3e3", cloud: "rgba(255,255,255,.9)" },
 ];
 const MAPS = ["언덕", "큰 산", "골짜기", "계단", "협곡"];
+// 낙하산 상자: 지나가며 줍거나 포탄으로 맞히면 얻는다
+const ITEMS = [
+  { name: "회복", col: "#7ddc7a", mark: "+" },
+  { name: "포탄 상자", col: "#ffc93c", mark: "●" },
+  { name: "방패", col: "#6ec6ff", mark: "◆" },
+  { name: "한 번 더", col: "#ff8fd0", mark: "↻" },
+];
 
 function makeTerrain(kind) {
   const f1 = 0.8 + Math.random() * 0.7, f2 = 2 + Math.random() * 1.5, f3 = 5 + Math.random() * 3;
@@ -55,9 +62,32 @@ function init(seats) {
   const p = seats.map((_, i) => {
     const x = Math.round((W * (i + 0.5)) / n + Math.random() * 40 - 20), c = Math.round(x / COLW), base = h[c];
     for (let k = -5; k <= 5; k++) if (h[c + k] != null) h[c + k] = base;      // 대포 밑은 평평하게
-    return { x, hp: 100, f: x < W / 2 ? 1 : -1, el: 50, pw: 0, fuel: FUEL, al: 1, pa: 0, pb: 0, w: 0, am: SHELLS.map((k) => k.n) };
+    return { x, hp: 100, f: x < W / 2 ? 1 : -1, el: 50, pw: 0, fuel: FUEL, al: 1, pa: 0, pb: 0, w: 0, sd: 0, xt: 0, am: SHELLS.map((k) => k.n) };
   });
-  return { tick: 0, seats, h, hv: 1, map, th: (Math.random() * THEMES.length) | 0, p, turn: 0, ph: 0, tl: TURN, tm: 0, wind: newWind(), sh: [], ex: [], over: null, fc: 0, bc: 0, dc: 0, tn: 0, wc: 0, bn: 0 };
+  const s = { tick: 0, seats, h, hv: 1, map, th: (Math.random() * THEMES.length) | 0, p, turn: 0, ph: 0, tl: TURN, tm: 0, wind: newWind(), sh: [], ex: [], it: [], msg: [], over: null, fc: 0, bc: 0, dc: 0, tn: 0, wc: 0, bn: 0, ic: 0 };
+  spawnItem(s);
+  return s;
+}
+
+function spawnItem(s) {
+  for (let tries = 0; tries < 20; tries++) {
+    const x = 50 + Math.random() * (W - 100);
+    if (s.p.some((p) => p.al && Math.abs(p.x - x) < 70) || s.it.some((q) => Math.abs(q.x - x) < 60)) continue;
+    s.it.push({ x: Math.round(x), y: -20, k: (Math.random() * ITEMS.length) | 0 });
+    return;
+  }
+}
+
+// i 번 선수가 아이템을 얻는다
+function give(s, i, at) {
+  const it = s.it[at], p = s.p[i]; let text = ITEMS[it.k].name;
+  s.it.splice(at, 1); s.ic++;
+  if (it.k === 0) { p.hp = Math.min(100, p.hp + 35); text = "체력 +35"; }
+  else if (it.k === 1) { const k = 1 + ((Math.random() * (SHELLS.length - 1)) | 0); p.am[k]++; text = SHELLS[k].name + " +1"; }
+  else if (it.k === 2) { p.sd = 1; text = "방패!"; }
+  else { p.xt = 1; text = "한 번 더!"; }
+  s.msg.push({ x: Math.round(p.x), y: Math.round(ty(s, p.x) - 80), text, t: 0 });
+  if (s.msg.length > 5) s.msg.shift();
 }
 
 function muzzle(s, p) {
@@ -84,26 +114,38 @@ function boom(s, x, y, k) {
     if (bottom > s.h[i]) s.h[i] = Math.round(Math.min(H - 14, bottom));
   }
   s.hv++;
+  for (let at = s.it.length - 1; at >= 0; at--) if (Math.hypot(s.it[at].x - x, s.it[at].y - y) < rad + 16) give(s, s.turn, at);      // 포탄으로 맞힌 상자는 쏜 사람 것
   for (const p of s.p) {
     if (!p.al) continue;
     const d = Math.hypot(p.x - x, ty(s, p.x) - 12 - y);
-    if (d < rad + 22) { p.hp -= Math.round(sh.d * (1 - d / (rad + 22))) + (d < 22 ? 12 : 0); if (p.hp <= 0) { p.hp = 0; p.al = 0; s.dc++; } }
+    if (d < rad + 22) {
+      let dmg = Math.round(sh.d * (1 - d / (rad + 22))) + (d < 22 ? 12 : 0);
+      if (p.sd) { dmg = Math.ceil(dmg / 2); p.sd = 0; }      // 방패는 한 번의 피해를 절반으로
+      p.hp -= dmg;
+      if (p.hp <= 0) { p.hp = 0; p.al = 0; s.dc++; }
+    }
   }
 }
 
 function nextTurn(s) {
   const alive = s.p.filter((p) => p.al);
   if (s.p.length > 1 && alive.length <= 1) { s.over = { w: alive.length ? s.p.indexOf(alive[0]) : -1, t: 0 }; return; }
-  do { s.turn = (s.turn + 1) % s.p.length; } while (!s.p[s.turn].al);
+  const was = s.p[s.turn];
+  if (was.al && was.xt) was.xt = 0;      // '한 번 더'를 얻었으면 같은 사람이 또 쏜다
+  else do { s.turn = (s.turn + 1) % s.p.length; } while (!s.p[s.turn].al);
   const p = s.p[s.turn];
   p.fuel = FUEL; p.pw = 0; p.pa = 0; p.pb = 0;
   s.ph = 0; s.tl = TURN; s.wind = newWind(); s.tn++;
+  if (s.tn % 2 === 0 && s.it.length < 3) spawnItem(s);
 }
 
 function step(s, masks) {
   s.tick++;
   for (const e of s.ex) e.t++;
   if (s.ex.length && s.ex[0].t > 36) s.ex = s.ex.filter((e) => e.t <= 36);
+  for (const q of s.msg) q.t++;
+  if (s.msg.length && s.msg[0].t > 90) s.msg.shift();
+  for (const q of s.it) { const g = ty(s, q.x) - 12; q.y = q.y < g ? Math.min(g, q.y + 1.5) : g; }      // 상자는 낙하산으로 천천히 내려와 땅에 놓인다
   if (s.over) { s.over.t++; return; }
   if (s.tick < START) return;
   if (s.ph === 0) {
@@ -116,6 +158,7 @@ function step(s, masks) {
         if (rise <= 30) {
           const sp = rise > 10 ? 1 : 2;
           p.x = clamp(p.x + dir * sp, 16, W - 16); p.fuel -= rise > 10 ? 2.5 : 2;
+          for (let at = s.it.length - 1; at >= 0; at--) if (Math.abs(s.it[at].x - p.x) < 24 && Math.abs(s.it[at].y - (ty(s, p.x) - 12)) < 30) give(s, s.turn, at);      // 지나가며 줍기
         }
       }
     }
@@ -199,11 +242,17 @@ function bot(s, i, mem, level) {
   const p = s.p[i];
   if (mem.tn !== s.tn) {
     mem.tn = s.tn; mem.plan = solve(s, i, level); mem.wait = 40 + Math.random() * 50; mem.charge = false;
+    const near = s.it.filter((q) => Math.abs(q.x - p.x) < 150 && q.y >= ty(s, q.x) - 14).sort((u, w) => Math.abs(u.x - p.x) - Math.abs(w.x - p.x))[0];
+    mem.walk = near && Math.random() < 0.7 ? near : null; mem.wt = 0;
     // 가끔 특수탄을 고른다 (튀는 통통탄은 조준이 달라져서 봇은 안 쓴다)
     const have = [1, 2, 3].filter((k) => p.am[k] > 0);
     mem.want = have.length && Math.random() < 0.4 ? have[(Math.random() * have.length) | 0] : 0;
   }
   if (mem.wait-- > 0) return 0;
+  if (mem.walk) {
+    if (!s.it.includes(mem.walk) || p.fuel <= 3 || mem.wt++ > 160 || Math.abs(mem.walk.x - p.x) < 4) { mem.walk = null; mem.plan = solve(s, i, level); }
+    else return mem.walk.x > p.x ? R : L;
+  }
   if (p.w !== mem.want) return s.tick % 8 < 4 ? B : 0;
   const pl = mem.plan;
   if (p.f !== pl.f) return pl.f > 0 ? R : L;
@@ -252,6 +301,7 @@ function draw(ctx, v, env) {
     ctx.fillStyle = "#2b2d6e"; rr(ctx, x - 20, y - 10, 40, 12, 6); ctx.fill();
     ctx.fillStyle = "#54609e"; ctx.beginPath(); ctx.arc(x - 12, y - 2, 5, 0, 7); ctx.arc(x, y - 2, 5, 0, 7); ctx.arc(x + 12, y - 2, 5, 0, 7); ctx.fill();
     drawMochi(ctx, x, y - 22, 15, parseLook(v.seats[i].look, i), { ang: p.f > 0 ? -0.3 : Math.PI + 0.3 });
+    if (p.sd) { ctx.strokeStyle = "rgba(110,198,255,.95)"; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(x, y - 18, 27 + Math.sin(env.t * 6) * 1.5, 0, 7); ctx.stroke(); }      // 방패
     ctx.fillStyle = "rgba(43,45,110,.85)"; rr(ctx, x - 24, y - 60, 48, 9, 4); ctx.fill();
     ctx.fillStyle = p.hp > 50 ? "#7ddc7a" : p.hp > 25 ? "#ffc93c" : "#ff5d73"; rr(ctx, x - 22, y - 58, Math.max(2, 44 * p.hp / 100), 5, 2.5); ctx.fill();
     label(ctx, v.seats[i].name, x, y - 66, 13, i === env.me ? "#d6336c" : "#2a2440", "rgba(255,255,255,.9)");
@@ -267,6 +317,17 @@ function draw(ctx, v, env) {
       }
     }
   });
+  // 낙하산 상자
+  for (const q of v.it || []) {
+    const it = ITEMS[q.k], falling = q.y < ty(v, q.x) - 13, y = q.y + (falling ? 0 : Math.sin(env.t * 3 + q.x) * 1.5);
+    if (falling) {
+      ctx.fillStyle = "#fff"; ctx.strokeStyle = it.col; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(q.x, y - 34, 20, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "rgba(43,45,110,.5)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(q.x - 20, y - 34); ctx.lineTo(q.x - 8, y - 10); ctx.moveTo(q.x + 20, y - 34); ctx.lineTo(q.x + 8, y - 10); ctx.stroke();
+    }
+    ctx.fillStyle = it.col; ctx.strokeStyle = "#2b2d6e"; ctx.lineWidth = 2.5; rr(ctx, q.x - 12, y - 12, 24, 24, 6); ctx.fill(); ctx.stroke();
+    label(ctx, it.mark, q.x, y + 6, 17, "#2b2d6e", null);
+  }
   // 포탄
   for (const b of v.sh) {
     const sh = SHELLS[b.k], rad = b.k === 1 ? 9 : b.k === 2 ? 4.5 : 6;
@@ -283,6 +344,8 @@ function draw(ctx, v, env) {
     ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(e.x, e.y, r * 0.3, 0, 7); ctx.fill();
     ctx.globalAlpha = 1;
   }
+  // 아이템 획득 알림
+  for (const q of v.msg || []) if (q.t < 80) label(ctx, q.text, q.x, q.y - q.t * 0.5, 20, "#ff5d73", "#fff");
   // 위쪽 안내
   ctx.fillStyle = "rgba(255,253,246,.92)"; rr(ctx, W / 2 - 150, 10, 300, 58, 16); ctx.fill();
   const wn = Math.round(Math.abs(v.wind) * 10);
@@ -311,7 +374,8 @@ function draw(ctx, v, env) {
 }
 
 function fx(v, m, snd, me) {
-  if (m.fc == null) Object.assign(m, { fc: v.fc, bc: v.bc, dc: v.dc, wc: v.wc, bn: v.bn, tn: -1, ov: !!v.over });
+  if (m.fc == null) Object.assign(m, { fc: v.fc, bc: v.bc, dc: v.dc, wc: v.wc, bn: v.bn, ic: v.ic | 0, tn: -1, ov: !!v.over });
+  if ((v.ic | 0) !== m.ic) { m.ic = v.ic | 0; jingle(snd, [700, 940, 1180], 70); }
   if (v.fc !== m.fc) { m.fc = v.fc; snd(160, 0.2, "square", 0.1, -80); snd(900, 0.5, "sine", 0.04, -500); }
   if (v.bc !== m.bc) { m.bc = v.bc; snd(80, 0.4, "sawtooth", 0.15, -30); }
   if (v.dc !== m.dc) { m.dc = v.dc; snd(400, 0.35, "sawtooth", 0.1, -300); }
@@ -345,6 +409,7 @@ export const meta = {
     ["목표", "번갈아 가며 포탄을 쏴서 상대의 체력을 0으로 만들어요. 마지막까지 남으면 승리"],
     ["조작", "←→ 이동(대포 아래 파란 연료 막대만큼, 차례마다 다시 참), ↑↓ 포신 각도, 스페이스를 꾹 눌러 힘을 모았다가 떼면 발사"],
     ["포탄", "Q로 바꿔요. 기본탄(무제한), 대왕탄(크게 터짐), 세발탄(세 발이 퍼짐), 굴착탄(땅을 깊이 팜), 통통탄(두 번 튄 뒤 터짐). 특수탄은 두 발씩"],
+    ["아이템", "낙하산 상자가 떨어져요. 지나가며 줍거나 포탄으로 맞히면 얻어요. 회복(체력 +35), 포탄 상자(특수탄 +1), 방패(다음 피해 절반), 한 번 더(바로 한 번 더 쏘기)"],
     ["지형", "판마다 언덕·큰 산·골짜기·계단·협곡 가운데 하나가 나오고, 낮·노을·밤·눈밭으로 분위기가 바뀌어요. 차례마다 바람도 바뀌어요"],
     ["한 키보드 2인", "1P: W·A·S·D + F, 포탄 Q / 2P: 방향키 + Enter, 포탄 마침표(.)"],
     ["휴대폰", "방향 버튼으로 이동·각도, 포탄 버튼으로 바꾸고, 발사 버튼을 꾹 눌렀다 떼기"],

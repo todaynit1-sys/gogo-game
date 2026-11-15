@@ -1,5 +1,5 @@
 // 블록 대전 — 떨어지는 블록으로 줄을 지워 상대에게 방해 줄을 보낸다.
-// 2칸부터 5칸까지 12가지 모양, 가로 9칸 × 세로 18칸.
+// 2칸부터 4칸까지 10가지 모양, 가로 9칸 × 세로 18칸.
 
 import { startVersus } from "./versus.js?v=1";
 import { label } from "./kit.js?v=1";
@@ -40,7 +40,7 @@ function hits(g, c, x, y) {
 function fill(b) {
   while (b.next.length < 4) {
     if (!b.bag.length) {
-      b.bag = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, Math.random() < 0.5 ? 10 : 11];
+      b.bag = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];      // 5칸짜리(십자·ㄷ)는 쓰지 않는다
       for (let i = b.bag.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [b.bag[i], b.bag[j]] = [b.bag[j], b.bag[i]]; }
     }
     b.next.push(b.bag.pop());

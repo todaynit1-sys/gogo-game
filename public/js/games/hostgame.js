@@ -44,7 +44,7 @@ export function startHostGame(G, opts) {
   const pu = () => { drag.on = false; };
   canvas.addEventListener("pointerdown", pd); canvas.addEventListener("pointermove", pm);
   canvas.addEventListener("pointerup", pu); canvas.addEventListener("pointercancel", pu);
-  const myAim = () => ({ x: drag.x, y: drag.y });
+  const myAim = () => ({ x: drag.x, y: drag.y, sx: Math.round(drag.sx), sy: Math.round(drag.sy) });
 
   const iAmHost = () => kind !== "online" || (room && room.host === room.you);
   const mySlot = () => { if (kind !== "online") return 0; const me = room.players.find((p) => p.id === room.you); return me ? me.slot : -1; };
@@ -81,7 +81,7 @@ export function startHostGame(G, opts) {
     aims = s.seats.map(() => null);
     return s.seats.map((seat, i) => {
       const human = (map, touch) => { aims[i] = myAim(); return maskOf(map, touch); };
-      const robot = (lv) => { const r = G.bot(s, i, mem[i], lv); if (r && typeof r === "object") { aims[i] = { x: r.x, y: r.y }; return r.m | 0; } return r | 0; };
+      const robot = (lv) => { const r = G.bot(s, i, mem[i], lv); if (r && typeof r === "object") { aims[i] = { x: r.x, y: r.y, sx: r.sx, sy: r.sy }; return r.m | 0; } return r | 0; };
       if (seat.c === "k0") return human(SOLO, true);
       if (seat.c === "k1") return human(P1, false);
       if (seat.c === "k2") return human(P2, false);
@@ -113,7 +113,7 @@ export function startHostGame(G, opts) {
     } else {
       sim = null;
       const m = snap && meIndex(snap) >= 0 ? maskOf(SOLO, true) : 0;
-      const key = G.pointer ? m + ":" + drag.x + ":" + drag.y : String(m);
+      const key = G.pointer ? m + ":" + drag.x + ":" + drag.y + (G.pointerStart ? ":" + Math.round(drag.sx) + ":" + Math.round(drag.sy) : "") : String(m);
       // 끄는 동안의 미세한 변화는 조금 묶어서 보낸다 (눌렀다 뗀 순간은 바로)
       if (key !== lastSent && (m !== lastMask || ++sendWait >= 3)) { lastSent = key; lastMask = m; sendWait = 0; opts.send("i" + key); }
     }
@@ -147,7 +147,11 @@ export function startHostGame(G, opts) {
         const slot = +msg[1]; if (!(slot >= 0 && slot < 4)) return;
         const part = msg.slice(2).split(":");
         remote[slot] = parseInt(part[0], 10) & 127;
-        if (part.length === 3) remoteAim[slot] = { x: Math.max(-400, Math.min(400, parseInt(part[1], 10) || 0)), y: Math.max(-400, Math.min(400, parseInt(part[2], 10) || 0)) };
+        if (part.length >= 3) {
+          const num = (k, lo, hi) => Math.max(lo, Math.min(hi, parseInt(part[k], 10) || 0));
+          remoteAim[slot] = { x: num(1, -400, 400), y: num(2, -400, 400) };
+          if (part.length >= 5) { remoteAim[slot].sx = num(3, -100, 1100); remoteAim[slot].sy = num(4, -100, 700); }
+        }
       }
     },
     setRoom(r) {
@@ -161,6 +165,6 @@ export function startHostGame(G, opts) {
       canvas.removeEventListener("pointerdown", pd); canvas.removeEventListener("pointermove", pm);
       canvas.removeEventListener("pointerup", pu); canvas.removeEventListener("pointercancel", pu);
     },
-    peek() { const v = iAmHost() ? sim : snap; return { host: iAmHost(), tick: v ? v.tick : -1, seats: v ? v.seats.length : 0, over: !!(v && v.over) }; },
+    peek() { const v = iAmHost() ? sim : snap; return { host: iAmHost(), tick: v ? v.tick : -1, seats: v ? v.seats.length : 0, over: !!(v && v.over), turn: v ? v.turn : -1, tn: v ? v.tn : -1 }; },
   };
 }

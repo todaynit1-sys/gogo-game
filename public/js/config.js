@@ -24,6 +24,7 @@ export const GAMES = [
   { id: "soccer", name: "떡 축구", tag: "2~4명 · 1대1 / 2대2", desc: "위에서 내려다보는 미니 축구. 몸으로 밀고 뻥 차서 골!", ready: true },
   { id: "cannon", name: "쾅쾅 포격전", tag: "2~4명 · 번갈아 쏘기", desc: "각도와 힘, 바람을 읽고 포탄을 날려요. 땅이 파이는 포격 대결.", ready: true },
   { id: "sling", name: "새총 무너뜨리기", tag: "1~4명 · 번갈아 쏘기", desc: "새총으로 몸을 날려 성을 무너뜨리고 도깨비를 잡아요.", ready: true },
+  { id: "alkkagi", name: "알까기", tag: "2~4명 · 번갈아 튕기기", desc: "내 알을 튕겨 상대 알을 판 밖으로! 온라인에서도 끊김 없는 차례제.", ready: true },
   { id: "blocks", name: "블록 대전", tag: "2~4명", desc: "줄을 지워 상대에게 방해 줄을 보내는 낙하 블록 대결.", ready: true },
   { id: "chain", name: "연쇄 팡", tag: "2~4명", desc: "같은 색 넷을 이어 터뜨리고, 연쇄로 상대를 몰아붙이기.", ready: true },
 ];
