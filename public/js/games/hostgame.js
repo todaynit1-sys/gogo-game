@@ -14,12 +14,12 @@
 import { sound, makeLoop, fit, keyboard, touchPad, label, BOT_NAMES } from "./kit.js?v=1";
 import { lookStr } from "../avatar.js?v=2";
 
-export const L = 1, R = 2, U = 4, D = 8, A = 16, P = 32;   // P = 화면을 끌고 있는 중
+export const L = 1, R = 2, U = 4, D = 8, A = 16, P = 32, B = 64;   // P = 화면을 끌고 있는 중
 const DIRS = L | R | U | D;
-const P1 = { KeyA: L, KeyD: R, KeyW: U, KeyS: D, KeyF: A, KeyG: A };
-const P2 = { ArrowLeft: L, ArrowRight: R, ArrowUp: U, ArrowDown: D, Enter: A, Slash: A, ShiftRight: A, Numpad0: A };
+const P1 = { KeyA: L, KeyD: R, KeyW: U, KeyS: D, KeyF: A, KeyG: A, KeyQ: B, KeyE: B };
+const P2 = { ArrowLeft: L, ArrowRight: R, ArrowUp: U, ArrowDown: D, Enter: A, Slash: A, ShiftRight: A, Numpad0: A, Period: B, Comma: B };
 const SOLO = { ...P1, ...P2, Space: A };
-const TOUCH = { L, R, U, D, A };
+const TOUCH = { L, R, U, D, A, B };
 
 export function startHostGame(G, opts) {
   const { canvas, kind } = opts;
@@ -30,7 +30,7 @@ export function startHostGame(G, opts) {
   const level = opts.level || "normal";
 
   const kb = keyboard(new Set(Object.keys(SOLO)));
-  const pad = touchPad(opts.touchEl, G.noPad ? [] : G.action ? [{ dpad: true }, [{ id: "A", label: G.action, cls: "smash big" }]] : [{ dpad: true }]);
+  const pad = touchPad(opts.touchEl, G.noPad ? [] : G.action ? [{ dpad: true }, G.action2 ? [{ id: "B", label: G.action2, cls: "jump" }, { id: "A", label: G.action, cls: "smash big" }] : [{ id: "A", label: G.action, cls: "smash big" }]] : [{ dpad: true }]);
 
   // 화면 끌기 조준: 누른 곳에서 끈 만큼(반대 방향으로 쏜다)
   const drag = { on: false, sx: 0, sy: 0, x: 0, y: 0 };
@@ -146,7 +146,7 @@ export function startHostGame(G, opts) {
       } else if (msg[0] === "i") {
         const slot = +msg[1]; if (!(slot >= 0 && slot < 4)) return;
         const part = msg.slice(2).split(":");
-        remote[slot] = parseInt(part[0], 10) & 63;
+        remote[slot] = parseInt(part[0], 10) & 127;
         if (part.length === 3) remoteAim[slot] = { x: Math.max(-400, Math.min(400, parseInt(part[1], 10) || 0)), y: Math.max(-400, Math.min(400, parseInt(part[2], 10) || 0)) };
       }
     },
