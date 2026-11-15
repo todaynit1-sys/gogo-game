@@ -68,7 +68,7 @@ export function startHostGame(G, opts) {
       seats.push({ c: "k1", name: "1P", look: opts.look ? lookStr(opts.look) : "" }, { c: "k2", name: "2P", look: "" });
       for (let i = 0; i < G.bots.local; i++) bot();
     } else {
-      const ps = [...room.players].sort((a, b) => a.slot - b.slot).slice(0, 4);
+      const ps = [...room.players].sort((a, b) => a.slot - b.slot).slice(0, G.cap ? G.cap(room.mode | 0, room.players.length) : 4);
       for (const p of ps) seats.push({ c: "r", slot: p.slot, name: p.name, look: p.look || "" });
       const n = Math.min(4 - seats.length, G.fill(room.mode | 0, ps.length));
       for (let i = 0; i < n; i++) bot();
@@ -118,7 +118,7 @@ export function startHostGame(G, opts) {
       if (key !== lastSent && (m !== lastMask || ++sendWait >= 3)) { lastSent = key; lastMask = m; sendWait = 0; opts.send("i" + key); }
     }
     const v = viewNow();
-    if (v && G.fx) G.fx(v, fxMem, snd);
+    if (v && G.fx) G.fx(v, fxMem, snd, meIndex(v));
   }
 
   function draw() {
