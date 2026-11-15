@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- 공유용 썸네일(og.png 1200×630)과 앱 아이콘(icon.png 512×512)을 그리는 페이지.
+     만들기: node tools/make-og.mjs  (헤드리스 크롬으로 이 페이지를 찍는다) -->
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=block" rel="stylesheet">
+<style>html, body { margin: 0; background: #fff4dc; overflow: hidden; } canvas { display: block; }</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script type="module">
+import { drawMochi, parseLook } from "../public/js/avatar.js";
+
+const NAVY = "#2b2d6e", CORAL = "#ff5d73", YELLOW = "#ffc93c", CREAM = "#fff4dc", PAPER = "#fffdf6";
+const icon = location.search.includes("icon");
+const W = icon ? 512 : 1200, H = icon ? 512 : 630;
+const cv = document.getElementById("c");
+cv.width = W; cv.height = H;
+const ctx = cv.getContext("2d");
+
+const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); };
+
+// 머리글 로고(오락기 패드)를 크기 s 로
+function logo(x, y, s) {
+  const k = s / 44;
+  ctx.save(); ctx.translate(x, y); ctx.scale(k, k);
+  ctx.lineWidth = 3; ctx.strokeStyle = NAVY;
+  ctx.fillStyle = NAVY; rr(19, 2, 6, 9, 3); ctx.fill();
+  ctx.fillStyle = YELLOW; rr(3, 9, 38, 28, 9); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = CORAL; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(15, 23, 5, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = NAVY; ctx.beginPath(); ctx.arc(29, 19, 3, 0, 7); ctx.arc(33, 26, 3, 0, 7); ctx.fill();
+  ctx.restore();
+}
+
+const TILES = {
+  volley: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect width="320" height="180" fill="#9ad8ff"/><circle cx="270" cy="38" r="20" fill="#fff3b0"/><rect y="138" width="320" height="42" fill="#f6dca6"/><rect x="156" y="78" width="8" height="62" fill="#8a5a3c"/><rect x="153" y="74" width="14" height="7" fill="#fff"/><ellipse cx="82" cy="118" rx="30" ry="26" fill="#ff9db5" stroke="#2b2d6e" stroke-width="4"/><circle cx="74" cy="112" r="5" fill="#2b2d6e"/><circle cx="94" cy="112" r="5" fill="#2b2d6e"/><ellipse cx="238" cy="98" rx="28" ry="30" fill="#9bd88a" stroke="#2b2d6e" stroke-width="4"/><circle cx="228" cy="92" r="5" fill="#2b2d6e"/><circle cx="246" cy="92" r="5" fill="#2b2d6e"/><circle cx="186" cy="46" r="17" fill="#fff" stroke="#2b2d6e" stroke-width="4"/><path d="M176 46a10 10 0 0 1 14-9" stroke="#ffb703" stroke-width="5" fill="none"/></svg>`,
+  cannon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect width="320" height="180" fill="#9ad8ff"/><path d="M0 130 Q60 90 120 120 T240 105 T320 125 V180 H0Z" fill="#b98a55" stroke="#6fbf5a" stroke-width="8"/><g stroke="#2b2d6e" stroke-width="4"><line x1="62" y1="100" x2="92" y2="76" stroke-width="9" stroke-linecap="round"/><circle cx="60" cy="100" r="17" fill="#ffd66b"/><line x1="262" y1="96" x2="234" y2="72" stroke-width="9" stroke-linecap="round"/><circle cx="264" cy="98" r="17" fill="#c3a6ff"/></g><path d="M96 70 Q160 0 220 60" fill="none" stroke="#2b2d6e" stroke-width="4" stroke-dasharray="3 10" stroke-linecap="round"/><circle cx="170" cy="30" r="8" fill="#2b2d6e"/></svg>`,
+  yut: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect width="320" height="180" fill="#f7ecd4"/><rect x="24" y="16" width="148" height="148" rx="12" fill="#fffaf0" stroke="#8a5a3c" stroke-width="5"/><g fill="none" stroke="#c79a63" stroke-width="3"><rect x="40" y="32" width="116" height="116"/><path d="M156 32L40 148M40 32l116 116"/></g><g fill="#fff" stroke="#8a5a3c" stroke-width="2.5"><circle cx="156" cy="148" r="9" fill="#ffe3a3"/><circle cx="156" cy="32" r="9" fill="#ffe3a3"/><circle cx="40" cy="32" r="9" fill="#ffe3a3"/><circle cx="40" cy="148" r="9" fill="#ffe3a3"/><circle cx="98" cy="90" r="9" fill="#ffe3a3"/></g><circle cx="156" cy="101" r="11" fill="#ff9db5" stroke="#2b2d6e" stroke-width="3"/><circle cx="64" cy="56" r="11" fill="#8ecbff" stroke="#2b2d6e" stroke-width="3"/><g stroke="#8a5a3c" stroke-width="3"><rect x="196" y="40" width="20" height="96" rx="10" fill="#f6dca6" transform="rotate(-12 206 88)"/><rect x="226" y="36" width="20" height="96" rx="10" fill="#c98a4a" transform="rotate(6 236 84)"/><rect x="256" y="44" width="20" height="96" rx="10" fill="#f6dca6" transform="rotate(-4 266 92)"/><rect x="284" y="40" width="20" height="96" rx="10" fill="#f6dca6" transform="rotate(14 294 88)"/></g></svg>`,
+  pool: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect width="320" height="180" fill="#f6e6c6"/><rect x="14" y="20" width="292" height="140" rx="20" fill="#8a5a3c"/><rect x="30" y="36" width="260" height="108" rx="6" fill="#2f8f5b"/><g fill="#15122a"><circle cx="32" cy="38" r="9"/><circle cx="160" cy="34" r="8"/><circle cx="288" cy="38" r="9"/><circle cx="32" cy="142" r="9"/><circle cx="160" cy="146" r="8"/><circle cx="288" cy="142" r="9"/></g><g stroke="#2a2440" stroke-width="2"><circle cx="210" cy="90" r="9" fill="#ffc93c"/><circle cx="226" cy="81" r="9" fill="#3d6fd6"/><circle cx="226" cy="99" r="9" fill="#e8453c"/><circle cx="242" cy="72" r="9" fill="#2f9e5a"/><circle cx="242" cy="90" r="9" fill="#fffdf6"/><circle cx="242" cy="108" r="9" fill="#8a55d6"/><circle cx="96" cy="90" r="10" fill="#fffdf6"/></g><path d="M84 90H20" stroke="#e9c887" stroke-width="6" stroke-linecap="round"/></svg>`,
+};
+const loadSvg = (svg) => new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = bad; im.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); });
+
+function dots(step, col) {
+  ctx.fillStyle = col;
+  for (let y = step / 2; y < H; y += step) for (let x = step / 2 + ((y / step) % 2 ? step / 2 : 0); x < W; x += step) { ctx.beginPath(); ctx.arc(x, y, 2, 0, 7); ctx.fill(); }
+}
+
+function chip(x, y, text, bg, fg) {
+  ctx.font = "30px Jua"; const w = ctx.measureText(text).width + 44, h = 60;
+  ctx.fillStyle = NAVY; rr(x + 4, y + 5, w, h, 30); ctx.fill();
+  ctx.fillStyle = bg; ctx.strokeStyle = NAVY; ctx.lineWidth = 4; rr(x, y, w, h, 30); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = fg; ctx.textBaseline = "middle"; ctx.fillText(text, x + 22, y + h / 2 + 2);
+  return w;
+}
+
+async function drawOg() {
+  ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
+  dots(28, "rgba(43,45,110,.08)");
+  // 오른쪽: 게임 장면 네 장
+  const tiles = await Promise.all(["volley", "cannon", "yut", "pool"].map((k) => loadSvg(TILES[k])));
+  const tw = 250, th = 141, pos = [[652, 64, -4], [924, 52, 3], [664, 236, 3], [938, 226, -3]];
+  tiles.forEach((im, i) => {
+    const [x, y, deg] = pos[i];
+    ctx.save(); ctx.translate(x + tw / 2, y + th / 2); ctx.rotate((deg * Math.PI) / 180);
+    ctx.fillStyle = NAVY; rr(-tw / 2 + 6, -th / 2 + 7, tw, th, 18); ctx.fill();
+    ctx.save(); rr(-tw / 2, -th / 2, tw, th, 18); ctx.clip(); ctx.drawImage(im, -tw / 2, -th / 2, tw, th); ctx.restore();
+    ctx.strokeStyle = NAVY; ctx.lineWidth = 5; rr(-tw / 2, -th / 2, tw, th, 18); ctx.stroke();
+    ctx.restore();
+  });
+  // 떡 친구들
+  const crew = [[748, 498, 58, "0.1.3.1.0"], [906, 474, 74, "4.4.7.0.1"], [1066, 502, 58, "2.3.2.3.0"]];
+  for (const [x, y, r] of crew) { ctx.fillStyle = "rgba(43,45,110,.16)"; ctx.beginPath(); ctx.ellipse(x, y + r + 8, r * 0.95, 13, 0, 0, 7); ctx.fill(); }
+  crew.forEach(([x, y, r, look], i) => drawMochi(ctx, x, y, r, parseLook(look), { ang: i === 0 ? -0.2 : i === 2 ? Math.PI + 0.2 : 1.57, open: i === 1 }));
+  // 공 하나
+  ctx.fillStyle = "#fff"; ctx.strokeStyle = "#3d6fd6"; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(818, 408, 22, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = "#ffb703"; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(818, 408, 13, -0.6, 0.9); ctx.stroke();
+
+  // 왼쪽: 이름과 설명
+  logo(70, 70, 92);
+  ctx.textBaseline = "alphabetic";
+  ctx.font = "34px Jua"; ctx.fillStyle = CORAL; ctx.fillText("온라인 오락실", 178, 128);
+  let size = 132; ctx.font = `${size}px Jua`;
+  while (ctx.measureText("한판 오락실").width > 540 && size > 80) { size -= 2; ctx.font = `${size}px Jua`; }
+  const tx = 66, ty = 300, tw2 = ctx.measureText("한판 오락실").width;
+  ctx.fillStyle = YELLOW; rr(tx - 6, ty - size * 0.36, tw2 + 16, size * 0.42, 14); ctx.fill();      // 형광펜
+  ctx.lineJoin = "round"; ctx.lineWidth = 10; ctx.strokeStyle = PAPER; ctx.strokeText("한판 오락실", tx, ty);
+  ctx.fillStyle = NAVY; ctx.fillText("한판 오락실", tx, ty);
+  ctx.font = "46px Jua"; ctx.fillStyle = NAVY; ctx.fillText("가입 없이, 친구랑 바로 한 판!", 70, 382);
+  let cx = 70;
+  cx += chip(cx, 426, "12가지 게임", YELLOW, NAVY) + 14;
+  cx += chip(cx, 426, "2~4명 함께", CORAL, "#fff") + 14;
+  chip(70, 500, "설치·가입 없음", PAPER, NAVY);
+  ctx.textBaseline = "alphabetic"; ctx.font = "26px Jua"; ctx.fillStyle = "#6b6480"; ctx.fillText("gogo-game.vercel.app", 72, 602);
+}
+
+function drawIcon() {
+  ctx.fillStyle = NAVY; ctx.fillRect(0, 0, W, H);
+  dots(40, "rgba(255,255,255,.07)");
+  logo(56, 40, 400);
+}
+
+// 한글 웹 글꼴은 글자 묶음별로 나눠 받으므로, 그림에 쓰는 글자를 모두 미리 받아 둔다
+const TEXT = "온라인 오락실 한판 가입 없이, 친구랑 바로 한 판! 12가지 게임 2~4명 함께 설치·가입 없음 gogo-game.vercel.app";
+await document.fonts.load("132px Jua", TEXT);
+await document.fonts.ready;
+if (icon) drawIcon(); else await drawOg();
+document.title = "done";
+</script>
+</body>
+</html>
