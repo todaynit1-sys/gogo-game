@@ -1,6 +1,7 @@
 // 한판 오락실 — 로비, 방 대기실, 게임 실행
 import { SITE, GAMES } from "./config.js";
-import { unlockAudio } from "./games/kit.js?v=2";
+import { unlockAudio, sound, events, BOT_NAMES } from "./games/kit.js?v=3";
+import { music } from "./music.js?v=2";
 import { BODY, FACES, HATS, PATTERNS, ACCS, drawMochi, parseLook, lookStr, randomLook } from "./avatar.js?v=3";
 
 const $ = (id) => document.getElementById(id);
@@ -10,6 +11,10 @@ const store = {
 };
 
 let muted = store.get("hp_muted") === "1";
+let musicOn = store.get("hp_music") !== "0";
+const ui = sound(() => muted);      // 화면 단추 소리
+// 게임마다 어울리는 배경음악
+const THEME = { volley: "sport", soccer: "sport", dodge: "sport", bomb: "tense", land: "tense", blocks: "puzzle", chain: "puzzle", cannon: "chill", sling: "chill", pool: "chill", alkkagi: "chill", yut: "yut" };
 let look = store.get("hp_look") ? parseLook(store.get("hp_look")) : randomLook();
 let current = GAMES[0];   // 고른 게임
 let ws = null, room = null, game = null, pingTimer = null, leaving = false;
@@ -17,7 +22,7 @@ let offline = null;       // 혼자/로컬 다시 하기용 설정
 let gameId = null, sawLobby = false, overPending = false;
 
 // 게임 모듈은 고를 때 불러온다
-const VER = "?v=16";
+const VER = "?v=17";
 const mods = {};
 const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" + VER));
 
@@ -28,6 +33,79 @@ function show(name) {
   if (name === "home" || name === "game") leaveFullscreen();
   window.scrollTo(0, 0);
   updateRotTip();
+  if (name !== "play") { $("emoBar").hidden = true; music.hurry(false); }
+  music.play(name === "play" ? THEME[current.id] || "lobby" : "lobby");
+}
+
+// ── 기록: 게임마다 이긴 판·연승 (이 기기에만 저장) ──
+let lastRec = "";
+const loadRec = () => { try { return JSON.parse(store.get("hp_rec") || "{}"); } catch { return {}; } };
+function record(id, win) {
+  const all = loadRec(), r = all[id] || { w: 0, p: 0, s: 0, b: 0 };
+  r.p++;
+  if (win) { r.w++; r.s++; r.b = Math.max(r.b, r.s); } else r.s = 0;
+  all[id] = r; store.set("hp_rec", JSON.stringify(all));
+  renderCards();
+  return (win && r.s >= 2 ? `${r.s}연승 중! · ` : "") + `이긴 판 ${r.w} / ${r.p}` + (r.b >= 2 ? ` · 최고 ${r.b}연승` : "");
+}
+
+// ── 승리 축포 ──
+function confetti() {
+  const cv = $("fxCv"), box = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(box.width * dpr); cv.height = Math.round(box.height * dpr);
+  const c = cv.getContext("2d"), W = cv.width, H = cv.height, cols = ["#ff5d73", "#ffc93c", "#8ed081", "#7cc6fe", "#b79cff", "#ff9db5"];
+  const bits = Array.from({ length: 150 }, (_, i) => ({ x: W * (i % 2 ? 0.25 : 0.75) + (Math.random() - 0.5) * W * 0.3, y: H * 0.6, vx: (Math.random() - 0.5) * 14 * dpr, vy: -(9 + Math.random() * 11) * dpr, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, s: (4 + Math.random() * 5) * dpr, col: cols[i % cols.length] }));
+  const t0 = performance.now();
+  const frame = (now) => {
+    const age = now - t0;
+    c.clearRect(0, 0, W, H);
+    if (age > 3600) return;
+    for (const b of bits) {
+      b.vy += 0.32 * dpr; b.vx *= 0.99; b.x += b.vx; b.y += b.vy; b.r += b.vr;
+      c.save(); c.translate(b.x, b.y); c.rotate(b.r); c.globalAlpha = age > 2800 ? Math.max(0, 1 - (age - 2800) / 800) : 1;
+      c.fillStyle = b.col; c.fillRect(-b.s, -b.s / 2, b.s * 2, b.s); c.restore();
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+// ── 말풍선 ──
+const PHRASES = ["안녕!", "좋아!", "나이스!", "아깝다!", "ㅋㅋㅋ", "한 판 더!"];
+const BOT_LINES = ["흥!", "다음엔 안 봐줘", "ㅎㅎ", "좋았어!", "나이스!", "어림없지!", "봐주는 거야~"];
+let lastEmote = 0;
+function showBubble(name, lk, text) {
+  const box = $("bubbles"), el = document.createElement("div");
+  el.className = "bubble";
+  const av = document.createElement("canvas"); av.width = 68; av.height = 68;
+  drawMochi(av.getContext("2d"), 34, 38, 24, lk);
+  const who = document.createElement("span"); who.className = "who"; who.textContent = name;
+  const b = document.createElement("b"); b.textContent = text;
+  el.append(av, who, b);
+  box.append(el);
+  while (box.children.length > 4) box.firstChild.remove();
+  ui.pop();
+  setTimeout(() => el.remove(), 2700);
+}
+function sendEmote(k) {
+  const now = performance.now();
+  if (now - lastEmote < 900 || $("v-play").hidden) return;
+  lastEmote = now;
+  showBubble(myName() || "나", look, PHRASES[k]);
+  if (room) send("b" + JSON.stringify({ t: "e", k }));
+  else if (offline && offline.kind === "solo" && Math.random() < 0.55) {      // 혼자 할 때는 봇이 가끔 대꾸한다
+    setTimeout(() => { if (!$("v-play").hidden) showBubble(BOT_NAMES[1], parseLook("", 1), BOT_LINES[(Math.random() * BOT_LINES.length) | 0]); }, 700 + Math.random() * 900);
+  }
+}
+function buildEmoBar() {
+  const bar = $("emoBar"); bar.innerHTML = "";
+  PHRASES.forEach((p, k) => {
+    const b = document.createElement("button"); b.type = "button";
+    const kb = document.createElement("kbd"); kb.textContent = String(k + 1);
+    b.append(kb, p);
+    b.addEventListener("click", () => { sendEmote(k); bar.hidden = true; });      // 보내면 닫아서 판을 가리지 않게
+    bar.append(b);
+  });
 }
 
 // ── 휴대폰: 전체 화면, 회전 안내 ──
@@ -93,6 +171,8 @@ function renderCards() {
     const h = b.querySelector("h3"); h.textContent = g.name;
     if (!g.ready) { const s = document.createElement("span"); s.className = "soon"; s.textContent = "준비 중"; h.append(s); }
     b.querySelector(".tag").textContent = g.tag;
+    const rec = loadRec()[g.id];
+    if (rec && rec.w) { const w = document.createElement("span"); w.className = "wins"; w.textContent = `이긴 판 ${rec.w}`; h.append(w); }
     b.querySelector("p").textContent = g.desc;
     if (g.ready) b.addEventListener("click", () => openGame(g));
     box.append(b);
@@ -126,9 +206,10 @@ async function playOffline(cfg) {
   game = mod.start({
     canvas: $("cv"), touchEl: $("touch"), kind: cfg.kind, level: cfg.level,
     myName: myName() || "나", look, isMuted: () => muted,
-    onOver: (r) => { $("resTitle").textContent = (r && r.title) || "한 판 더 할까요?"; $("result").hidden = false; },
+    onOver: (r) => { $("resTitle").textContent = (r && r.title) || "한 판 더 할까요?"; $("resSub").textContent = lastRec; $("result").hidden = false; },
   });
   gameId = current.id;
+  lastRec = "";
   afterStart(mod);
 }
 
@@ -160,6 +241,13 @@ function connect(code, { pub = false } = {}) {
   sock.onmessage = (e) => {
     const m = e.data;
     if (typeof m !== "string" || m === "pong") return;
+    if (m[0] === "b" && m[2] === "{" && m.includes('"t":"e"')) {
+      try {
+        const slot = +m[1], d = JSON.parse(m.slice(2)), p = room && room.players.find((x) => x.slot === slot);
+        if (d.t === "e" && p) showBubble(p.name, parseLook(p.look, slot), PHRASES[(d.k | 0) % PHRASES.length]);
+      } catch {}
+      return;
+    }
     if (m[0] === "s" || m[0] === "i" || m[0] === "b") { if (game) game.onNet(m); return; }
     let d; try { d = JSON.parse(m); } catch { return; }
     if (d.t === "full") { leaving = true; toast("방이 꽉 찼어요 (최대 4명)"); goHome(); }
@@ -184,7 +272,9 @@ function disconnect() {
 function send(x) { if (ws && ws.readyState === 1) ws.send(typeof x === "string" ? x : JSON.stringify(x)); }
 
 async function onRoom(d) {
+  const before = room ? room.players.length : 0;
   room = d;
+  if (d.phase === "lobby" && before && d.players.length > before) ui.coin();
   const g = GAMES.find((x) => x.id === d.game); if (g) current = g;
   history.replaceState(null, "", "?r=" + d.code);
   let mod; try { mod = await loadMod(d.game); } catch { return toast("게임을 불러오지 못했어요. 새로고침해 주세요"); }
@@ -206,6 +296,7 @@ async function onRoom(d) {
       onOver: () => { if (room && room.host === room.you) send({ t: "end" }); else overPending = true; },
     });
     gameId = d.game;
+    lastRec = "";
     afterStart(mod);
   } else {
     sawLobby = true; overPending = false;
@@ -304,6 +395,8 @@ function renderCloset() {
 function saveLook() { store.set("hp_look", lookStr(look)); renderCloset(); }
 
 const pointer = { x: 0.7, y: 0.3 };
+const TAP_LINES = ["안녕!", "놀자!", "간지러워!", "한 판 할래?", "히히", "오늘은 뭐 하지?", "꾸며 줘서 고마워!"];
+let roomTap = null;
 function paintRoom(t) {
   const cv = $("avatarCv");
   const c = cv.getContext("2d"), W = cv.width, H = cv.height, s = t / 1000;
@@ -328,10 +421,24 @@ function paintRoom(t) {
   c.fillStyle = "#ff8fab"; c.beginPath(); c.ellipse(330, 470, 190, 44, 0, 0, 7); c.fill();
   c.strokeStyle = "#fff"; c.lineWidth = 5; c.setLineDash([14, 12]); c.beginPath(); c.ellipse(330, 470, 160, 32, 0, 0, 7); c.stroke(); c.setLineDash([]);
   // 캐릭터 (통통 튄다)
-  const hop = Math.abs(Math.sin(s * 2.2)), y = 372 - hop * 26;
-  c.fillStyle = "rgba(80,50,20,.2)"; c.beginPath(); c.ellipse(330, 468, 84 - hop * 14, 14, 0, 0, 7); c.fill();
+  const age = roomTap ? t - roomTap.t : 1e9, tapping = age < 1600;
+  const hop = Math.abs(Math.sin(s * 2.2)), jump = tapping && age < 520 ? Math.sin((age / 520) * Math.PI) * 70 : 0;
+  const y = 372 - hop * 26 - jump;
+  c.fillStyle = "rgba(80,50,20,.2)"; c.beginPath(); c.ellipse(330, 468, 84 - hop * 14 - jump * 0.3, 14, 0, 0, 7); c.fill();
   const ang = Math.atan2(pointer.y * H - y, pointer.x * W - 330);
-  drawMochi(c, 330, y, 100, look, { ang, sq: (hop - 0.5) * 0.12 });
+  const wob = tapping ? Math.sin(age / 45) * 0.16 * Math.max(0, 1 - age / 900) : 0;
+  drawMochi(c, 330, y, 100, look, { ang, sq: (hop - 0.5) * 0.12 + wob, open: tapping && age < 700 });
+  if (tapping) {      // 말풍선
+    c.font = "700 30px Jua, sans-serif"; c.textAlign = "center";
+    const tw = c.measureText(roomTap.text).width + 40, bx = Math.min(W - tw / 2 - 10, 330 + 90), by = Math.max(60, y - 150);
+    c.globalAlpha = Math.min(1, (1600 - age) / 300);
+    c.fillStyle = "#fffdf6"; c.strokeStyle = "#2b2d6e"; c.lineWidth = 5;
+    c.beginPath(); c.roundRect(bx - tw / 2, by - 36, tw, 56, 18); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(bx - 40, by + 18); c.lineTo(bx - 64, by + 46); c.lineTo(bx - 14, by + 18); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = "#fffdf6"; c.fillRect(bx - 38, by + 14, 22, 8);
+    c.fillStyle = "#2b2d6e"; c.fillText(roomTap.text, bx, by + 2);
+    c.globalAlpha = 1;
+  }
 }
 function roomLoop(t) {
   requestAnimationFrame(roomLoop);
@@ -364,8 +471,40 @@ async function copy(text, okMsg) {
 // ── 이벤트 연결 ──
 function init() {
   // 휴대폰: 첫 터치에 소리를 켜고(iOS 는 손가락으로 건드려야 소리가 난다), 화면을 돌리면 안내를 다시 본다
-  window.addEventListener("pointerdown", unlockAudio, { once: true, capture: true });
-  window.addEventListener("touchend", unlockAudio, { once: true, capture: true });
+  const firstTouch = () => { unlockAudio(); music.unlock(); };
+  window.addEventListener("pointerdown", firstTouch, { once: true, capture: true });
+  window.addEventListener("touchend", firstTouch, { once: true, capture: true });
+  window.addEventListener("keydown", firstTouch, { once: true, capture: true });
+  music.setOn(musicOn);
+  const setMusic = () => { for (const id of ["musicBtn", "musicBtn2"]) { $(id).textContent = id === "musicBtn" ? (musicOn ? "음악 켬" : "음악 끔") : musicOn ? "음악 끄기" : "음악 켜기"; $(id).setAttribute("aria-pressed", String(musicOn)); } };
+  setMusic();
+  for (const id of ["musicBtn", "musicBtn2"]) $(id).addEventListener("click", () => { musicOn = !musicOn; store.set("hp_music", musicOn ? "1" : "0"); music.setOn(musicOn); setMusic(); });
+  // 판이 끝나면 음악을 잠깐 쉬고, 이기면 축포
+  events.addEventListener("over", (e) => {
+    music.pause(0.8);
+    const win = e.detail ? e.detail.win : null, kindNow = room ? "online" : offline && offline.kind;
+    lastRec = win != null && kindNow !== "local" ? record(gameId || current.id, win) : "";
+    if (win === true) { confetti(); ui.cheer(); }
+    if (room && lastRec) { const txt = (win ? "이겼어요! " : "아쉬워요. ") + lastRec; setTimeout(() => toast(txt), 1400); }
+  });
+  events.addEventListener("hurry", (e) => music.hurry(!!e.detail));
+  // 말풍선
+  buildEmoBar();
+  $("emoBtn").addEventListener("click", () => { $("emoBar").hidden = !$("emoBar").hidden; });
+  document.addEventListener("keydown", (e) => {
+    if ($("v-play").hidden || (e.target && /INPUT|TEXTAREA/.test(e.target.tagName))) return;
+    const k = /^Digit([1-6])$/.exec(e.code);
+    if (k) sendEmote(+k[1] - 1);
+  });
+  // 단추 누르는 소리
+  document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest(".btn, .card, .chipbtn, .swatch, .seg button, .chip")) ui.pop(); });
+  // 내 방 캐릭터 누르기
+  $("avatarCv").addEventListener("pointerdown", (e) => {
+    const r = $("avatarCv").getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * 720, y = ((e.clientY - r.top) / r.height) * 560;
+    if (Math.hypot(x - 330, y - 360) > 130) return;
+    roomTap = { t: performance.now(), text: TAP_LINES[(Math.random() * TAP_LINES.length) | 0] };
+    ui(420, 0.18, "sine", 0.12, 500); ui(840, 0.12, "triangle", 0.06, 300, 0.08);
+  });
   window.addEventListener("resize", updateRotTip);
   $("rotClose").addEventListener("click", () => { rotDismissed = true; updateRotTip(); });
   $("fsBtn").hidden = !(document.fullscreenEnabled && coarse());

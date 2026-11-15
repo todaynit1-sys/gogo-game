@@ -4,7 +4,7 @@
 
 import { startHostGame, L, R, U, D } from "./hostgame.js?v=2";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
-import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=2";
+import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=3";
 
 const GW = 48, GH = 27, CELL = 20, N = GW * GH, W = 960, H = 540;
 const START = 120, TIME = 90 * 60, MOVE_EVERY = 7, RESPAWN = 16, ITEM_EVERY = 400;
@@ -305,8 +305,8 @@ function draw(ctx, v, env) {
 function fx(v, m, snd) {
   if (m.dc == null) Object.assign(m, { dc: v.dc, cc: v.cc, ic: v.ic | 0, ov: !!v.over, sec: 99 });
   if (v.dc !== m.dc) { m.dc = v.dc; snd(400, 0.35, "sawtooth", 0.1, -300); }
-  if (v.cc !== m.cc) { m.cc = v.cc; snd(520, 0.12, "triangle", 0.11, 260); }
-  if ((v.ic | 0) !== m.ic) { m.ic = v.ic | 0; snd(760, 0.14, "triangle", 0.12, 400); }
+  if (v.cc !== m.cc) { m.cc = v.cc; snd.sparkle(); }
+  if ((v.ic | 0) !== m.ic) { m.ic = v.ic | 0; snd.coin(); }
   const sec = Math.ceil(v.time / 60);
   if (sec !== m.sec) { m.sec = sec; if (sec <= 5 && sec > 0 && !v.over) snd(880, 0.08, "square", 0.07); }
   if (!!v.over !== m.ov) { m.ov = !!v.over; if (v.over) jingle(snd, [523, 659, 784, 1047], 130); }
@@ -320,6 +320,7 @@ function title(v, me) {
 
 const G = {
   W, H, sendEvery: MOVE_EVERY, action: null, overDelay: 220,
+  hurry: (v) => v.tick >= START && v.time < 600,
   bots: { solo: 3, local: 2 },
   fill: (mode, n) => (mode === 1 ? (n < 2 ? 1 : 0) : 4 - n),
   init, step, bot, draw, fx, title, pack, unpack, adopt: (v) => v,

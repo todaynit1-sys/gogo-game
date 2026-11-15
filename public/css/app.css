@@ -129,6 +129,23 @@ input[type="text"], input:not([type]) { width: 100%; min-height: 44px; border: 2
 #cv { width: 100%; height: auto; max-height: calc(100dvh - 170px); object-fit: contain; display: block; touch-action: none; }
 .result { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 9%; gap: 12px; line-height: 1.5; background: linear-gradient(transparent 45%, rgba(255, 255, 255, .75)); }
 .result h2 { margin: 0; font-size: 22px; }
+.result { z-index: 5; }
+.ressub { margin: 0; color: var(--navy); font-size: 15px; font-weight: 700; }
+/* 승리 축포 · 말풍선 */
+.fxcv { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+.bubbles { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; pointer-events: none; line-height: 1.2; z-index: 3; max-width: 72%; }
+.bubble { display: flex; align-items: center; gap: 6px; background: var(--paper); border: 3px solid var(--navy); border-radius: 16px; padding: 3px 12px 3px 3px; box-shadow: 3px 3px 0 var(--navy); font-family: var(--display); color: var(--navy); animation: bubble-in .22s ease-out, bubble-out .4s ease-in 2.2s forwards; }
+.bubble canvas { width: 34px; height: 34px; flex: none; }
+.bubble .who { font-size: 13px; color: var(--muted); }
+.bubble b { font-weight: 400; font-size: 19px; }
+@keyframes bubble-in { from { transform: scale(.6) translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes bubble-out { to { opacity: 0; transform: translateY(-8px); } }
+.emobar { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 8px; background: rgba(255, 253, 246, .95); border: 3px solid var(--navy); border-radius: 18px; box-shadow: 4px 4px 0 var(--navy); z-index: 4; line-height: 1.2; width: max-content; max-width: calc(100% - 20px); }
+.emobar button { font-family: var(--display); font-size: 17px; background: #fff; color: var(--navy); border: 2px solid var(--navy); border-radius: 999px; padding: 5px 12px; min-height: 40px; }
+.emobar button:active { background: var(--yellow); }
+.emobar kbd { font-family: inherit; font-size: 12px; color: var(--muted); margin-right: 5px; }
+.wins { display: inline-block; font-family: "Malgun Gothic", sans-serif; font-size: 12px; font-weight: 700; color: #fff; background: #2f9e5a; border-radius: 999px; padding: 2px 9px; }
+#avatarCv { cursor: pointer; }
 .touch { display: none; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; user-select: none; -webkit-user-select: none; }
 .dpad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 2px; }
 .dpad .tbtn { width: 56px; height: 56px; font-size: 18px; }
@@ -164,6 +181,8 @@ input[type="text"], input:not([type]) { width: 100%; min-height: 44px; border: 2
 /* ── 휴대폰 ── */
 .rotate-tip { display: none; }
 @media (pointer: coarse) {
+  .emobar kbd { display: none; }
+  .chip-line { font-size: 13px; padding: 3px 9px; }
   /* 게임 중에는 머리글·꼬리글을 숨기고 화면을 게임에 양보한다 */
   html.playing { overscroll-behavior: none; }
   html.playing .top, html.playing .foot { display: none; }
@@ -202,4 +221,4 @@ input[type="text"], input:not([type]) { width: 100%; min-height: 44px; border: 2
   .tgroup { gap: 6px; }
   .rotate-tip:not([hidden]) { position: fixed; top: 6px; left: 50%; transform: translateX(-50%); z-index: 6; margin: 0; max-width: 92vw; }
 }
-@media (prefers-reduced-motion: reduce) { .btn, .card { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .btn, .card { transition: none; } .bubble { animation: none; } }

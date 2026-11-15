@@ -3,7 +3,7 @@
 
 import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=2";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
-import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=2";
+import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=3";
 
 const W = 960, H = 540, BX = 70, BY = 60, S = 420, START = 80, THROW_T = 15 * 60, PICK_T = 20 * 60, HOMEN = 99;
 const NAME = { "-1": "빽도", 1: "도", 2: "개", 3: "걸", 4: "윷", 5: "모" };
@@ -377,11 +377,11 @@ function drawGroup(ctx, v, q, x, y, cnt, env) {
 
 function fx(v, m, snd, me) {
   if (m.thc == null) Object.assign(m, { thc: v.thc, rc: v.rc, mc: v.mc, capc: v.capc, finc: v.finc, k: -1, tn: -1, ov: !!v.over });
-  if (v.thc !== m.thc) { m.thc = v.thc; for (let k = 0; k < 4; k++) setTimeout(() => snd(300 + Math.random() * 300, 0.05, "square", 0.06), 120 + k * 70); }
+  if (v.thc !== m.thc) { m.thc = v.thc; for (let k = 0; k < 4; k++) snd.wood(1, 0.12 + k * 0.08 + Math.random() * 0.04); }
   if (v.rc !== m.rc) { m.rc = v.rc; const r = v.res[v.res.length - 1]; if (r >= 4) jingle(snd, [659, 784, 1047, 1319], 90); else if (r < 0) snd(500, 0.3, "triangle", 0.1, -300); else snd(660, 0.14, "triangle", 0.1); }
   const k = v.mv ? v.mv.k : -1;
-  if (k !== m.k) { if (k > 0) snd(520 + k * 40, 0.06, "sine", 0.08); m.k = k; }
-  if (v.capc !== m.capc) { m.capc = v.capc; snd(180, 0.2, "square", 0.12, -80); jingle(snd, [880, 1100], 90); }
+  if (k !== m.k) { if (k > 0) snd.wood(0.6); m.k = k; }
+  if (v.capc !== m.capc) { m.capc = v.capc; snd.thud(1.2); jingle(snd, [880, 1100], 90); }
   if (v.finc !== m.finc) { m.finc = v.finc; jingle(snd, [523, 784, 1047], 100); }
   if (v.tn !== m.tn) { m.tn = v.tn; if (v.turn === me && v.ph === 0 && v.tick >= START) snd(880, 0.1, "triangle", 0.08); }
   if (!!v.over !== m.ov) { m.ov = !!v.over; if (v.over) jingle(snd, [523, 659, 784, 1047], 130); }

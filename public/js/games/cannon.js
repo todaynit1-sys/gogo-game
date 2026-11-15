@@ -3,7 +3,7 @@
 
 import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=2";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
-import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=2";
+import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
 
 const W = 960, H = 540, COLW = 4, NC = 240, GRAV = 0.12, WINDK = 0.012, START = 100, TURN = 20 * 60, FUEL = 180;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -375,9 +375,9 @@ function draw(ctx, v, env) {
 
 function fx(v, m, snd, me) {
   if (m.fc == null) Object.assign(m, { fc: v.fc, bc: v.bc, dc: v.dc, wc: v.wc, bn: v.bn, ic: v.ic | 0, tn: -1, ov: !!v.over });
-  if ((v.ic | 0) !== m.ic) { m.ic = v.ic | 0; jingle(snd, [700, 940, 1180], 70); }
-  if (v.fc !== m.fc) { m.fc = v.fc; snd(160, 0.2, "square", 0.1, -80); snd(900, 0.5, "sine", 0.04, -500); }
-  if (v.bc !== m.bc) { m.bc = v.bc; snd(80, 0.4, "sawtooth", 0.15, -30); }
+  if ((v.ic | 0) !== m.ic) { m.ic = v.ic | 0; snd.coin(); jingle(snd, [700, 940, 1180], 70); }
+  if (v.fc !== m.fc) { m.fc = v.fc; snd.thud(1.4); snd.whoosh(); }
+  if (v.bc !== m.bc) { m.bc = v.bc; snd.boom(1.2); }
   if (v.dc !== m.dc) { m.dc = v.dc; snd(400, 0.35, "sawtooth", 0.1, -300); }
   if (v.wc !== m.wc) { m.wc = v.wc; snd(520, 0.05, "triangle", 0.08); }
   if (v.bn !== m.bn) { m.bn = v.bn; snd(380, 0.08, "sine", 0.09, 200); }

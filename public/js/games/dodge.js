@@ -3,7 +3,7 @@
 
 import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=2";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
-import { rr, label, jingle } from "./kit.js?v=2";
+import { rr, label, jingle } from "./kit.js?v=3";
 
 const W = 960, H = 540, FX0 = 60, FX1 = 900, FY0 = 74, FY1 = 500, MID = 480, CY = (FY0 + FY1) / 2;
 const PR = 20, BR = 11, START = 100, TIME = 150 * 60, SPEED = 12.5, LIVE_MIN = 5, HOLD_MAX = 300, CATCH_WIN = 14;
@@ -284,12 +284,13 @@ function draw(ctx, v, env) {
 
 function fx(v, m, snd) {
   if (m.tc == null) Object.assign(m, { tc: v.tc, hc: v.hc, cc: v.cc, pc: v.pc, oc: v.oc, dk: v.dk, ov: !!v.over });
-  if (v.tc !== m.tc) { m.tc = v.tc; snd(500, 0.12, "sawtooth", 0.06, -350); }
-  if (v.hc !== m.hc) { m.hc = v.hc; snd(150, 0.18, "square", 0.12, -60); }
+  if (v.tc !== m.tc) { m.tc = v.tc; snd.whoosh(1.3); }
+  if (!m.st && v.tick >= START) { m.st = 1; snd.whistle(); }
+  if (v.hc !== m.hc) { m.hc = v.hc; snd.thud(1.3); }
   if (v.cc !== m.cc) { m.cc = v.cc; jingle(snd, [660, 880, 1100], 70); }
   if (v.pc !== m.pc) { m.pc = v.pc; snd(420, 0.06, "triangle", 0.08, 120); }
   if (v.oc !== m.oc) { m.oc = v.oc; snd(400, 0.35, "sawtooth", 0.1, -300); }
-  if (v.dk !== m.dk) { m.dk = v.dk; snd(700, 0.14, "sawtooth", 0.05, -500); }
+  if (v.dk !== m.dk) { m.dk = v.dk; snd.whoosh(); }
   if (!!v.over !== m.ov) { m.ov = !!v.over; if (v.over) jingle(snd, [523, 659, 784, 1047], 130); }
 }
 
@@ -302,6 +303,7 @@ function title(v, me) {
 
 const G = {
   W, H, sendEvery: 2, action: "던지기", action2: "대시", overDelay: 220, multiDir: true,
+  hurry: (v) => v.tick >= START && v.time < 600,
   bots: { solo: 3, local: 2 },
   cap: (mode, n) => mode || (n >= 3 ? 4 : 2),
   fill: (mode, n) => Math.max(0, (mode || (n >= 3 ? 4 : 2)) - n),

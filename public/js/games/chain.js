@@ -2,7 +2,7 @@
 // 터진 뒤 떨어진 떡이 또 터지면(연쇄) 상대에게 돌떡이 쏟아진다.
 
 import { startVersus } from "./versus.js?v=2";
-import { label } from "./kit.js?v=2";
+import { label } from "./kit.js?v=3";
 
 const COLS = 7, ROWS = 12, HID = 2, TR = ROWS + HID, SPAWN_X = 3;
 const OFF = [[0, -1], [1, 0], [0, 1], [-1, 0]];       // 짝꿍 위치: 위, 오른쪽, 아래, 왼쪽

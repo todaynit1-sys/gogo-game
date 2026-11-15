@@ -10,8 +10,9 @@
 //   pack(상태) → 보낼 것   unpack(받은 것) → 보기   viewOf(상태) → 보기   adopt(보기) → 상태
 //   multiDir: 대각선 이동 허용   pointer: 화면 끌기 조준 사용 (step 의 세 번째 인자로 끈 방향이 온다)
 //   noPad: 방향 버튼 없이 터치 끌기만 쓰는 게임
+//   hurry(보기) → true 면 시간이 촉박하다고 앱에 알린다(배경음악이 빨라짐)
 
-import { sound, makeLoop, fit, keyboard, touchPad, label, BOT_NAMES } from "./kit.js?v=2";
+import { sound, makeLoop, fit, keyboard, touchPad, label, BOT_NAMES, emit } from "./kit.js?v=3";
 import { lookStr } from "../avatar.js?v=3";
 
 export const L = 1, R = 2, U = 4, D = 8, A = 16, P = 32, B = 64;   // P = 화면을 끌고 있는 중
@@ -28,6 +29,8 @@ export function startHostGame(G, opts) {
   let sim = null, snap = null, prev = null, snapAt = 0, snapGap = 0.1, overSent = false, lastSent = "", lastMask = -1, sendWait = 0, t = 0;
   const remote = [0, 0, 0, 0], latch = [0, 0, 0, 0], mem = [{}, {}, {}, {}], fxMem = {};      // latch: 한 틱 사이에 눌렀다 뗀 버튼도 놓치지 않게
   const level = opts.level || "normal";
+  let overSaid = false, hurrySaid = false;
+  const winOf = (title) => (/^이겼/.test(title) ? true : /^아쉬/.test(title) ? false : null);
 
   const kb = keyboard(new Set(Object.keys(SOLO)));
   const pad = touchPad(opts.touchEl, G.noPad ? [] : G.action ? [{ dpad: true }, G.action2 ? [{ id: "B", label: G.action2, cls: "jump" }, { id: "A", label: G.action, cls: "smash big" }] : [{ id: "A", label: G.action, cls: "smash big" }]] : [{ dpad: true }]);
@@ -120,6 +123,11 @@ export function startHostGame(G, opts) {
     }
     const v = viewNow();
     if (v && G.fx) G.fx(v, fxMem, snd, meIndex(v));
+    if (v) {
+      if (v.over && !overSaid) { overSaid = true; const me = meIndex(v); emit("over", { win: kind === "local" || me < 0 ? null : winOf(G.title(v, me)) }); }
+      const h = !!(G.hurry && !v.over && G.hurry(v));
+      if (h !== hurrySaid) { hurrySaid = h; emit("hurry", h); }
+    }
   }
 
   function draw() {
@@ -165,6 +173,7 @@ export function startHostGame(G, opts) {
     },
     stop() {
       stopLoop(); kb.stop(); pad.stop();
+      if (hurrySaid) emit("hurry", false);
       canvas.removeEventListener("pointerdown", pd); canvas.removeEventListener("pointermove", pm);
       canvas.removeEventListener("pointerup", pu); canvas.removeEventListener("pointercancel", pu);
     },

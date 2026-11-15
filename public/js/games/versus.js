@@ -10,7 +10,7 @@
 //   draw(ctx, 보기용 판, x, y, cell, t, mini)   drawNext(ctx, 판, x, y, cell)
 //   bot(판, mem, level, dt)
 
-import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, label, BOT_NAMES } from "./kit.js?v=2";
+import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, label, BOT_NAMES, emit } from "./kit.js?v=3";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 
 const K_SOLO = { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", ArrowDown: "D", KeyS: "D", ArrowUp: "rot", KeyW: "rot", KeyX: "rot", KeyZ: "rot2", Space: "drop", Enter: "drop", KeyC: "hold", ShiftLeft: "hold" };
@@ -95,6 +95,7 @@ export function startVersus(G, opts) {
     const f = focus();
     if (f && f.board && kind !== "local") { if (w === f.slot) jingle(snd, [523, 659, 784, 1047], 130); else jingle(snd, [392, 330, 262], 160); }
     else jingle(snd, [523, 659, 784, 1047], 130);
+    emit("over", { win: f && f.board && kind !== "local" ? w === f.slot : null });
   }
 
   function tick(dt) {
@@ -104,7 +105,7 @@ export function startVersus(G, opts) {
       count -= dt;
       const c = Math.ceil(count - 0.2);
       if (c !== lastCount && c >= 1 && c <= 3) { lastCount = c; snd(520, 0.1, "triangle", 0.1); }
-      if (count <= 0) { phase = "play"; snd(880, 0.2, "triangle", 0.12); }
+      if (count <= 0) { phase = "play"; snd.whistle(); }
     }
     // 눌린 키 처리
     for (const code of kb.press.splice(0)) for (const s of seats) if (s.map && s.map[code]) press(s, s.map[code]);
@@ -124,10 +125,10 @@ export function startVersus(G, opts) {
         const loud = s.map != null;
         for (const e of s.board.ev.splice(0)) {
           if (!loud) continue;
-          if (e === "lock") snd(160, 0.06, "square", 0.06);
+          if (e === "lock") snd.clack(0.6);
           else if (e === "rot") snd(620, 0.04, "sine", 0.05);
-          else if (e === "garbage") snd(110, 0.2, "sawtooth", 0.08);
-          else if (e[0] === "c") snd(500 + 110 * +e.slice(1), 0.16, "triangle", 0.13, 200);
+          else if (e === "garbage") snd.thud(0.9);
+          else if (e[0] === "c") { snd(500 + 110 * +e.slice(1), 0.16, "triangle", 0.13, 200); if (+e.slice(1) >= 2) snd.sparkle(); }
         }
         if (s.board.out > 0) { const n = s.board.out; s.board.out = 0; routeAttack(s, n); }
         if (!s.board.alive) { s.alive = false; snd(200, 0.4, "sawtooth", 0.1, -140); net({ t: "d" }, s); }

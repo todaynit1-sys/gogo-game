@@ -3,7 +3,7 @@
 
 import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=2";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
-import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=2";
+import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
 
 const W = 960, H = 540, TX0 = 150, TY0 = 104, TW = 660, TH = 330, BR = 11, FR = 0.986, START = 90, TURN = 25 * 60, MAXP = 130, VK = 14 / MAXP;
 const PK = [[TX0, TY0, 21], [TX0 + TW / 2, TY0 - 2, 19], [TX0 + TW, TY0, 21], [TX0, TY0 + TH, 21], [TX0 + TW / 2, TY0 + TH + 2, 19], [TX0 + TW, TY0 + TH, 21]];
@@ -288,10 +288,10 @@ function draw(ctx, v, env) {
 
 function fx(v, m, snd, me) {
   if (m.fc == null) Object.assign(m, { fc: v.fc, hc: v.hc, wc: v.wc, pc: v.pc, xc: v.xc, tn: -1, ov: !!v.over });
-  if (v.fc !== m.fc) { m.fc = v.fc; snd(260, 0.08, "square", 0.1, 120); }
-  if (v.hc !== m.hc) { m.hc = v.hc; snd(1100, 0.04, "triangle", 0.1, -300); }
-  if (v.wc !== m.wc) { m.wc = v.wc; snd(200, 0.05, "sine", 0.06); }
-  if (v.pc !== m.pc) { m.pc = v.pc; snd(320, 0.18, "sine", 0.12, -200); }
+  if (v.fc !== m.fc) { m.fc = v.fc; snd.clack(1.3); }
+  if (v.hc !== m.hc) { m.hc = v.hc; snd.clack(); }
+  if (v.wc !== m.wc) { m.wc = v.wc; snd.thud(0.35); }
+  if (v.pc !== m.pc) { m.pc = v.pc; snd.thud(0.6); snd(320, 0.18, "sine", 0.1, -200); }
   if (v.xc !== m.xc) { m.xc = v.xc; snd(400, 0.35, "sawtooth", 0.08, -300); }
   if (v.tn !== m.tn) { m.tn = v.tn; if (v.turn === me && v.tick >= START) jingle(snd, [660, 880], 90); }
   if (!!v.over !== m.ov) { m.ov = !!v.over; if (v.over) jingle(snd, [523, 659, 784, 1047], 130); }

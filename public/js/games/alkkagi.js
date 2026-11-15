@@ -3,7 +3,7 @@
 
 import { startHostGame, L, R, U, D, A, P, B } from "./hostgame.js?v=2";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
-import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=2";
+import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=3";
 
 const W = 960, H = 540, BX = 250, BY = 40, BS = 460, SR = 17, FR = 0.972, MAXP = 120, VK = 11.5 / MAXP, START = 90, TURN = 20 * 60;
 const BOARDS = [
@@ -202,8 +202,8 @@ function draw(ctx, v, env) {
 
 function fx(v, m, snd, me) {
   if (m.hc == null) Object.assign(m, { hc: v.hc, fc: v.fc, fl: v.fl, tn: -1, ov: !!v.over });
-  if (v.fl !== m.fl) { m.fl = v.fl; snd(240, 0.08, "square", 0.08, 120); }
-  if (v.hc !== m.hc) { m.hc = v.hc; snd(900, 0.05, "triangle", 0.12, -300); }
+  if (v.fl !== m.fl) { m.fl = v.fl; snd.clack(1.2); }
+  if (v.hc !== m.hc) { m.hc = v.hc; snd.wood(1.1); }
   if (v.fc !== m.fc) { m.fc = v.fc; snd(420, 0.3, "sawtooth", 0.09, -320); }
   if (v.tn !== m.tn) { m.tn = v.tn; if (v.turn === me && v.tick >= START) jingle(snd, [660, 880], 90); }
   if (!!v.over !== m.ov) { m.ov = !!v.over; if (v.over) jingle(snd, [523, 659, 784, 1047], 130); }

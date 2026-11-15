@@ -3,7 +3,7 @@
 
 import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=2";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
-import { rr, label, jingle } from "./kit.js?v=2";
+import { rr, label, jingle } from "./kit.js?v=3";
 
 const W = 960, H = 540, FX0 = 48, FX1 = 912, FY0 = 58, FY1 = 502, GY0 = 205, GY1 = 355, CX = W / 2, CY = (FY0 + FY1) / 2;
 const PR = 20, BR = 12, TIME = 120 * 60, WIN_GOALS = 5, OVERTIME = 45 * 60;
@@ -215,10 +215,11 @@ function draw(ctx, v, env) {
 
 function fx(v, m, snd) {
   if (m.gk == null) Object.assign(m, { gk: v.gk, kk: v.kk, wk: v.wk, dk: v.dk, ov: !!v.over });
-  if (v.dk !== m.dk) { m.dk = v.dk; snd(700, 0.14, "sawtooth", 0.05, -500); }
-  if (v.kk !== m.kk) { m.kk = v.kk; snd(210, 0.09, "square", 0.1, -90); }
+  if (v.dk !== m.dk) { m.dk = v.dk; snd.whoosh(); }
+  if (v.ph !== m.ph) { if (v.ph === 1 && !v.over) snd.whistle(); m.ph = v.ph; }
+  if (v.kk !== m.kk) { m.kk = v.kk; snd.thud(0.9); }
   if (v.wk !== m.wk) { m.wk = v.wk; snd(330, 0.05, "sine", 0.06); }
-  if (v.gk !== m.gk) { m.gk = v.gk; jingle(snd, [523, 659, 784, 1047, 1319], 90); }
+  if (v.gk !== m.gk) { m.gk = v.gk; jingle(snd, [523, 659, 784, 1047, 1319], 90); snd.cheer(); }
   if (!!v.over !== m.ov) { m.ov = !!v.over; if (v.over) jingle(snd, [784, 659, 784, 1047], 150); }
 }
 
@@ -231,6 +232,7 @@ function title(v, me) {
 
 const G = {
   W, H, sendEvery: 2, action: "차기", action2: "대시", overDelay: 220, multiDir: true,
+  hurry: (v) => v.time < 600,
   bots: { solo: 3, local: 2 },
   cap: (mode, n) => mode || (n >= 3 ? 4 : 2),
   fill: (mode, n) => Math.max(0, (mode || (n >= 3 ? 4 : 2)) - n),

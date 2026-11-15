@@ -2,7 +2,7 @@
 // 2칸부터 4칸까지 10가지 모양, 가로 9칸 × 세로 18칸.
 
 import { startVersus } from "./versus.js?v=2";
-import { label } from "./kit.js?v=2";
+import { label } from "./kit.js?v=3";
 
 const COLS = 9, ROWS = 18, HID = 3, TR = ROWS + HID;
 const SHAPES = [

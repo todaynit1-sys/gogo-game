@@ -3,7 +3,7 @@
 // 혼자 하기·한 키보드 2인은 서버 없이 돌아간다.
 
 import { drawMochi as paintMochi, parseLook } from "../avatar.js?v=3";
-import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, BOT_NAMES, SEAT_DARK } from "./kit.js?v=2";
+import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, BOT_NAMES, SEAT_DARK, emit } from "./kit.js?v=3";
 
 const W = 960, H = 540, GROUND = 470, NET_X = 480, NET_HW = 7, NET_TOP = GROUND - 165;
 const PR = 40, BR = 24, DT = 1 / 60;
@@ -249,7 +249,7 @@ export function start(opts) {
   let snap = null;       // 받은 최신 상태
   let view = null;       // 화면에 그리는 상태
   let overSent = false, shake = 0;
-  let seenH = 0, seenK = 0, seenScore = 0, seenPh = -1, seenSl = 0;
+  let seenH = 0, seenK = 0, seenScore = 0, seenPh = -1, seenSl = 0, started = false, hurrySaid = false;
   const touchy = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
   const remote = [0, 0, 0, 0];
   const botMem = [{}, {}, {}, {}];
@@ -348,11 +348,21 @@ export function start(opts) {
   function effects() {
     const s = view; if (!s) return;
     if (s.h !== seenH) { seenH = s.h; snd(430 + Math.random() * 80, 0.09, "sine", 0.14, 160); }
-    if (s.k !== seenK) { seenK = s.k; shake = 9; sparks.push({ x: s.b.x, y: s.b.y, t: 0 }); snd(180, 0.16, "square", 0.1, -90); snd(760, 0.08, "triangle", 0.1, -300); }
-    if ((s.sl | 0) !== seenSl) { seenSl = s.sl | 0; snd(900, 0.16, "sawtooth", 0.05, -700); }
+    if (s.k !== seenK) { seenK = s.k; shake = 9; sparks.push({ x: s.b.x, y: s.b.y, t: 0 }); snd.thud(1.2); snd(760, 0.08, "triangle", 0.1, -300); }
+    if ((s.sl | 0) !== seenSl) { seenSl = s.sl | 0; snd.whoosh(1.2); }
+    if (!started && s.ph === 1) { started = true; snd.whistle(); }
+    const h = s.ph !== 3 && Math.max(s.sc[0], s.sc[1]) === WIN_SCORE - 1;      // 매치 포인트면 음악이 빨라진다
+    if (h !== hurrySaid) { hurrySaid = h; emit("hurry", h); }
     const sc = s.sc[0] + s.sc[1];
     if (sc !== seenScore) { seenScore = sc; shake = 6; jingle(snd, [660, 880], 100); }
-    if (s.ph !== seenPh) { if (s.ph === 3) jingle(snd, [523, 659, 784, 1047], 130); seenPh = s.ph; }
+    if (s.ph !== seenPh) {
+      if (s.ph === 3) {
+        jingle(snd, [523, 659, 784, 1047], 130);
+        const me = mySlot(), myTeam = kind !== "local" && me >= 0 && me < s.mode ? me % 2 : -1;
+        emit("over", { win: myTeam < 0 ? null : myTeam === s.win });
+      }
+      seenPh = s.ph;
+    }
     trail.push({ x: s.b.x, y: s.b.y }); if (trail.length > 7) trail.shift();
     if (shake > 0) shake *= 0.85;
   }
@@ -509,7 +519,7 @@ export function start(opts) {
       if (!wasHost && iAmHost() && snap) { sim = snap; view = sim; }
       lastSentMask = -1;
     },
-    stop() { stopLoop(); kb.stop(); pad.stop(); },
+    stop() { stopLoop(); kb.stop(); pad.stop(); if (hurrySaid) emit("hurry", false); },
     peek() { return { host: iAmHost(), tick: view ? view.tick : -1, sc: view ? view.sc : null, sl: view ? view.sl : 0, p: view ? view.p.map((q) => [Math.round(q.x), q.dv, q.rc]) : [] }; },
   };
 }

@@ -2,7 +2,7 @@
 
 import { startHostGame, L, R, U, D, A } from "./hostgame.js?v=2";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
-import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=2";
+import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=3";
 
 const GW = 15, GH = 11, CELL = 44, OX = 150, OY = 50, W = 960, H = 540;
 const SPAWN = [[1, 1], [13, 9], [13, 1], [1, 9]];
@@ -359,9 +359,9 @@ function draw(ctx, v, env) {
 function fx(v, m, snd) {
   if (m.ex == null) Object.assign(m, { ex: v.ex, bc: v.bc, pk: v.pk, dc: v.dc, sk: v.sk | 0, ov: !!v.over });
   if ((v.sk | 0) !== m.sk) { m.sk = v.sk | 0; snd(520, 0.2, "triangle", 0.12, -300); }
-  if (v.ex !== m.ex) { m.ex = v.ex; shake = 9; snd(90, 0.3, "sawtooth", 0.14, -40); snd(240, 0.12, "square", 0.07, -150); }
+  if (v.ex !== m.ex) { m.ex = v.ex; shake = 9; snd.boom(0.9); }
   if (v.bc !== m.bc) { m.bc = v.bc; snd(300, 0.06, "sine", 0.08, -80); }
-  if (v.pk !== m.pk) { m.pk = v.pk; snd(700, 0.1, "triangle", 0.1, 300); }
+  if (v.pk !== m.pk) { m.pk = v.pk; snd.coin(); }
   if (v.dc !== m.dc) { m.dc = v.dc; snd(400, 0.35, "sawtooth", 0.1, -300); }
   if (!!v.over !== m.ov) { m.ov = !!v.over; if (v.over) jingle(snd, [523, 659, 784, 1047], 130); }
   if (shake > 0) shake *= 0.86;
@@ -376,6 +376,7 @@ function title(v, me) {
 
 const G = {
   W, H, sendEvery: 3, action: "폭탄", overDelay: 200,
+  hurry: (v) => v.tick >= SHRINK_AT,
   bots: { solo: 3, local: 2 },
   fill: (mode, n) => (mode === 1 ? (n < 2 ? 1 : 0) : 4 - n),
   init, step, bot, draw, fx, title, pack, viewOf: pack, adopt,
