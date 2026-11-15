@@ -8,11 +8,13 @@
 //   bot(상태, i, mem, level) → 조작              draw(ctx, 보기, env)
 //   fx(보기, 기억, snd)                           title(보기, 내 번호)
 //   pack(상태) → 보낼 것   unpack(받은 것) → 보기   viewOf(상태) → 보기   adopt(보기) → 상태
+//   multiDir: 대각선 이동 허용   pointer: 화면 끌기 조준 사용 (step 의 세 번째 인자로 끈 방향이 온다)
+//   noPad: 방향 버튼 없이 터치 끌기만 쓰는 게임
 
 import { sound, makeLoop, fit, keyboard, touchPad, label, BOT_NAMES } from "./kit.js?v=1";
 import { lookStr } from "../avatar.js?v=1";
 
-export const L = 1, R = 2, U = 4, D = 8, A = 16;
+export const L = 1, R = 2, U = 4, D = 8, A = 16, P = 32;   // P = 화면을 끌고 있는 중
 const DIRS = L | R | U | D;
 const P1 = { KeyA: L, KeyD: R, KeyW: U, KeyS: D, KeyF: A, KeyG: A };
 const P2 = { ArrowLeft: L, ArrowRight: R, ArrowUp: U, ArrowDown: D, Enter: A, Slash: A, ShiftRight: A, Numpad0: A };
@@ -23,12 +25,26 @@ export function startHostGame(G, opts) {
   const { canvas, kind } = opts;
   const snd = sound(opts.isMuted);
   let room = opts.room || null;
-  let sim = null, snap = null, prev = null, snapAt = 0, snapGap = 0.1, overSent = false, lastSent = -1, t = 0;
+  let sim = null, snap = null, prev = null, snapAt = 0, snapGap = 0.1, overSent = false, lastSent = "", lastMask = -1, sendWait = 0, t = 0;
   const remote = [0, 0, 0, 0], mem = [{}, {}, {}, {}], fxMem = {};
   const level = opts.level || "normal";
 
   const kb = keyboard(new Set(Object.keys(SOLO)));
-  const pad = touchPad(opts.touchEl, G.action ? [{ dpad: true }, [{ id: "A", label: G.action, cls: "smash big" }]] : [{ dpad: true }]);
+  const pad = touchPad(opts.touchEl, G.noPad ? [] : G.action ? [{ dpad: true }, [{ id: "A", label: G.action, cls: "smash big" }]] : [{ dpad: true }]);
+
+  // 화면 끌기 조준: 누른 곳에서 끈 만큼(반대 방향으로 쏜다)
+  const drag = { on: false, sx: 0, sy: 0, x: 0, y: 0 };
+  const remoteAim = [null, null, null, null];
+  const toLogical = (e) => {
+    const r = canvas.getBoundingClientRect(), sc = Math.min(r.width / G.W, r.height / G.H) || 1;
+    return [(e.clientX - r.left - (r.width - G.W * sc) / 2) / sc, (e.clientY - r.top - (r.height - G.H * sc) / 2) / sc];
+  };
+  const pd = (e) => { if (!G.pointer) return; e.preventDefault(); const [x, y] = toLogical(e); drag.on = true; drag.sx = x; drag.sy = y; drag.x = 0; drag.y = 0; try { canvas.setPointerCapture(e.pointerId); } catch {} };
+  const pm = (e) => { if (!drag.on) return; const [x, y] = toLogical(e); drag.x = Math.round(drag.sx - x); drag.y = Math.round(drag.sy - y); };
+  const pu = () => { drag.on = false; };
+  canvas.addEventListener("pointerdown", pd); canvas.addEventListener("pointermove", pm);
+  canvas.addEventListener("pointerup", pu); canvas.addEventListener("pointercancel", pu);
+  const myAim = () => ({ x: drag.x, y: drag.y });
 
   const iAmHost = () => kind !== "online" || (room && room.host === room.you);
   const mySlot = () => { if (kind !== "online") return 0; const me = room.players.find((p) => p.id === room.you); return me ? me.slot : -1; };
@@ -36,8 +52,10 @@ export function startHostGame(G, opts) {
   // 방향은 가장 나중에 누른 키가 이긴다
   function maskOf(map, withTouch) {
     let dir = 0, act = 0;
-    for (const c of kb.order) { const b = map[c]; if (!b) continue; if (b & DIRS) dir = b; else act |= b; }
-    if (withTouch) for (const c of pad.order) { const b = TOUCH[c]; if (b & DIRS) dir = b; else act |= b; }
+    const multi = !!G.multiDir;
+    for (const c of kb.order) { const b = map[c]; if (!b) continue; if (b & DIRS) dir = multi ? dir | b : b; else act |= b; }
+    if (withTouch) for (const c of pad.order) { const b = TOUCH[c]; if (b & DIRS) dir = multi ? dir | b : b; else act |= b; }
+    if (G.pointer && drag.on) act |= P;
     return dir | act;
   }
 
@@ -58,17 +76,21 @@ export function startHostGame(G, opts) {
     return seats;
   }
 
+  let aims = [];
   function inputs(s) {
+    aims = s.seats.map(() => null);
     return s.seats.map((seat, i) => {
-      if (seat.c === "k0") return maskOf(SOLO, true);
-      if (seat.c === "k1") return maskOf(P1, false);
-      if (seat.c === "k2") return maskOf(P2, false);
+      const human = (map, touch) => { aims[i] = myAim(); return maskOf(map, touch); };
+      const robot = (lv) => { const r = G.bot(s, i, mem[i], lv); if (r && typeof r === "object") { aims[i] = { x: r.x, y: r.y }; return r.m | 0; } return r | 0; };
+      if (seat.c === "k0") return human(SOLO, true);
+      if (seat.c === "k1") return human(P1, false);
+      if (seat.c === "k2") return human(P2, false);
       if (seat.c === "r") {
-        if (seat.slot === mySlot()) return maskOf(SOLO, true);
-        if (room.players.some((p) => p.slot === seat.slot)) return remote[seat.slot];
-        return G.bot(s, i, mem[i], "normal");          // 나간 사람 자리는 봇이 이어받는다
+        if (seat.slot === mySlot()) return human(SOLO, true);
+        if (room.players.some((p) => p.slot === seat.slot)) { aims[i] = remoteAim[seat.slot]; return remote[seat.slot]; }
+        return robot("normal");                          // 나간 사람 자리는 봇이 이어받는다
       }
-      return G.bot(s, i, mem[i], kind === "online" ? "normal" : level);
+      return robot(kind === "online" ? "normal" : level);
     });
   }
 
@@ -84,13 +106,16 @@ export function startHostGame(G, opts) {
     t += dt;
     if (iAmHost()) {
       if (!sim) sim = snap ? (G.adopt ? G.adopt(snap) : snap) : G.init(buildSeats(), { mode: room ? room.mode | 0 : 0, level });
-      G.step(sim, inputs(sim));
+      const masks = inputs(sim);
+      G.step(sim, masks, aims);
       if (kind === "online" && sim.tick % G.sendEvery === 0) opts.send("s" + JSON.stringify(G.pack ? G.pack(sim) : sim));
       if (sim.over && sim.over.t > (G.overDelay || 240) && !overSent) { overSent = true; opts.onOver({ title: G.title(sim, meIndex(sim)) }); }
     } else {
       sim = null;
       const m = snap && meIndex(snap) >= 0 ? maskOf(SOLO, true) : 0;
-      if (m !== lastSent) { lastSent = m; opts.send("i" + m); }
+      const key = G.pointer ? m + ":" + drag.x + ":" + drag.y : String(m);
+      // 끄는 동안의 미세한 변화는 조금 묶어서 보낸다 (눌렀다 뗀 순간은 바로)
+      if (key !== lastSent && (m !== lastMask || ++sendWait >= 3)) { lastSent = key; lastMask = m; sendWait = 0; opts.send("i" + key); }
     }
     const v = viewNow();
     if (v && G.fx) G.fx(v, fxMem, snd);
@@ -118,15 +143,24 @@ export function startHostGame(G, opts) {
           if (snapAt) snapGap = Math.max(0.03, Math.min(0.4, snapGap * 0.7 + ((now - snapAt) / 1000) * 0.3));
           snapAt = now;
         } catch {}
-      } else if (msg[0] === "i") { const slot = +msg[1]; if (slot >= 0 && slot < 4) remote[slot] = parseInt(msg.slice(2), 10) & 31; }
+      } else if (msg[0] === "i") {
+        const slot = +msg[1]; if (!(slot >= 0 && slot < 4)) return;
+        const part = msg.slice(2).split(":");
+        remote[slot] = parseInt(part[0], 10) & 63;
+        if (part.length === 3) remoteAim[slot] = { x: Math.max(-400, Math.min(400, parseInt(part[1], 10) || 0)), y: Math.max(-400, Math.min(400, parseInt(part[2], 10) || 0)) };
+      }
     },
     setRoom(r) {
       const wasHost = iAmHost();
       room = r;
       if (!wasHost && iAmHost() && snap) sim = G.adopt ? G.adopt(snap) : snap;
-      lastSent = -1;
+      lastSent = ""; lastMask = -1;
     },
-    stop() { stopLoop(); kb.stop(); pad.stop(); },
+    stop() {
+      stopLoop(); kb.stop(); pad.stop();
+      canvas.removeEventListener("pointerdown", pd); canvas.removeEventListener("pointermove", pm);
+      canvas.removeEventListener("pointerup", pu); canvas.removeEventListener("pointercancel", pu);
+    },
     peek() { const v = iAmHost() ? sim : snap; return { host: iAmHost(), tick: v ? v.tick : -1, seats: v ? v.seats.length : 0, over: !!(v && v.over) }; },
   };
 }

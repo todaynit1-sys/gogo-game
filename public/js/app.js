@@ -16,7 +16,7 @@ let offline = null;       // 혼자/로컬 다시 하기용 설정
 let gameId = null, sawLobby = false, overPending = false;
 
 // 게임 모듈은 고를 때 불러온다
-const VER = "?v=5";
+const VER = "?v=6";
 const mods = {};
 const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" + VER));
 

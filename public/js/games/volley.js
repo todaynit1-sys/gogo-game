@@ -28,16 +28,16 @@ export const meta = {
   howto: [
     ["이동·점프", "방향키 또는 A·D·W"],
     ["강타", "점프한 채로 스페이스(또는 F). 아래 키를 같이 누르면 내리꽂고, 뒤쪽 키를 누르면 높이 넘겨요"],
-    ["슬라이딩", "땅에서 좌우 키 + 스페이스(또는 F). 멀리 떨어지는 공을 몸을 날려 받아요"],
+    ["슬라이딩", "땅에서 스페이스(또는 F, ↓)를 누르면 보는 방향으로 몸을 날려요. 좌우 키를 같이 누르면 그쪽으로. 멀리 떨어지는 공을 받을 때 써요"],
     ["한 키보드 2인", "1P: A·D·W·S + F / 2P: 방향키 + Enter"],
-    ["휴대폰", "화면 아래 버튼. 좌우 버튼을 누른 채 강타를 누르면 슬라이딩"],
+    ["휴대폰", "화면 아래 버튼. 강타 버튼은 점프 중엔 강타, 땅에서는 슬라이딩이에요"],
   ],
 };
 
 // ── 상태 ──────────────────────────────────────────────
 function newState(mode) {
-  const s = { tick: 0, mode, ph: 0, tm: 50, sv: 0, sc: [0, 0], win: -1, h: 0, k: 0, lh: -99, p: [], b: { x: 0, y: 0, vx: 0, vy: 0 } };
-  for (let i = 0; i < mode; i++) s.p.push({ x: HOME[mode][i], y: GROUND - PR, vx: 0, vy: 0, sm: 0, dv: 0, dd: 1, rc: 0, pa: 0, team: i % 2 });
+  const s = { tick: 0, mode, ph: 0, tm: 50, sv: 0, sc: [0, 0], win: -1, h: 0, k: 0, sl: 0, lh: -99, p: [], b: { x: 0, y: 0, vx: 0, vy: 0 } };
+  for (let i = 0; i < mode; i++) s.p.push({ x: HOME[mode][i], y: GROUND - PR, vx: 0, vy: 0, sm: 0, dv: 0, dd: 1, rc: 0, pa: 0, fd: i % 2 ? -1 : 1, team: i % 2 });
   resetRound(s, Math.random() < 0.5 ? 0 : 1);
   return s;
 }
@@ -52,16 +52,18 @@ function stepPlayer(p, m) {
   const onGround = p.y >= GROUND - PR - 0.5;
   if (p.dv > 0) {
     // 슬라이딩: 짧은 시간 빠르게 미끄러진다
-    p.dv--; p.vx = p.dd * (520 + p.dv * 26);
-    if (p.dv === 0) p.rc = 12;
+    p.dv--; p.vx = p.dd * (540 + p.dv * 26);
+    if (p.dv === 0) p.rc = 11;
   } else if (p.rc > 0) {
     p.rc--; p.vx = 0;           // 일어나는 동안은 못 움직인다
   } else {
     p.vx = ((m & R ? 1 : 0) - (m & L ? 1 : 0)) * MOVE;
-    if (m & A && !p.pa && onGround && m & (L | R) && !(m & U)) { p.dv = 16; p.dd = m & R ? 1 : -1; }
+    if (p.vx) p.fd = p.vx > 0 ? 1 : -1;
+    // 땅에서 강타 키(또는 아래 키)를 누르면 슬라이딩. 좌우 키를 같이 누르면 그쪽으로, 아니면 보는 방향으로.
+    if (m & (A | D) && !p.pa && onGround && !(m & U)) { p.dv = 18; p.dd = m & R ? 1 : m & L ? -1 : p.fd || 1; }
     else if (m & U && onGround) p.vy = -JUMP;
   }
-  p.pa = m & A ? 1 : 0;
+  p.pa = m & (A | D) ? 1 : 0;
   p.vy += PG * DT;
   p.x += p.vx * DT; p.y += p.vy * DT;
   if (p.y > GROUND - PR) { p.y = GROUND - PR; p.vy = 0; }
@@ -74,7 +76,7 @@ function stepPlayer(p, m) {
 
 function step(s, masks) {
   s.tick++;
-  for (let i = 0; i < s.p.length; i++) stepPlayer(s.p[i], masks[i] | 0);
+  for (let i = 0; i < s.p.length; i++) { stepPlayer(s.p[i], masks[i] | 0); if (s.p[i].dv === 18) s.sl++; }
   const b = s.b;
 
   if (s.ph === 0) { if (--s.tm <= 0) s.ph = 1; return; }
@@ -149,16 +151,16 @@ function step(s, masks) {
 
 // ── 네트워크용 압축 ────────────────────────────────────
 function encode(s) {
-  const a = [s.tick, s.mode, s.ph, s.tm, s.sv, s.sc[0], s.sc[1], s.win, s.h, s.k, Math.round(s.b.x), Math.round(s.b.y), Math.round(s.b.vx), Math.round(s.b.vy)];
+  const a = [s.tick, s.mode, s.ph, s.tm, s.sv, s.sc[0], s.sc[1], s.win, s.h, s.k, Math.round(s.b.x), Math.round(s.b.y), Math.round(s.b.vx), Math.round(s.b.vy), s.sl];
   for (const p of s.p) a.push(Math.round(p.x), Math.round(p.y), Math.round(p.vx), Math.round(p.vy), p.sm, p.dv, p.rc);
   return "s" + JSON.stringify(a);
 }
 
 function decode(str) {
   const a = JSON.parse(str.slice(1));
-  const s = { tick: a[0], mode: a[1], ph: a[2], tm: a[3], sv: a[4], sc: [a[5], a[6]], win: a[7], h: a[8], k: a[9], lh: a[0], b: { x: a[10], y: a[11], vx: a[12], vy: a[13] }, p: [] };
-  for (let i = 0, j = 14; i < s.mode; i++, j += 7) {
-    s.p.push({ x: a[j], y: a[j + 1], vx: a[j + 2], vy: a[j + 3], sm: a[j + 4], dv: a[j + 5], rc: a[j + 6], dd: a[j + 2] < 0 ? -1 : 1, pa: 0, team: i % 2 });
+  const s = { tick: a[0], mode: a[1], ph: a[2], tm: a[3], sv: a[4], sc: [a[5], a[6]], win: a[7], h: a[8], k: a[9], lh: a[0], b: { x: a[10], y: a[11], vx: a[12], vy: a[13] }, sl: a[14], p: [] };
+  for (let i = 0, j = 15; i < s.mode; i++, j += 7) {
+    s.p.push({ x: a[j], y: a[j + 1], vx: a[j + 2], vy: a[j + 3], sm: a[j + 4], dv: a[j + 5], rc: a[j + 6], dd: a[j + 2] < 0 ? -1 : 1, fd: a[j + 2] < 0 ? -1 : 1, pa: 0, team: i % 2 });
   }
   return s;
 }
@@ -229,7 +231,8 @@ export function start(opts) {
   let snap = null;       // 받은 최신 상태
   let view = null;       // 화면에 그리는 상태
   let overSent = false, shake = 0;
-  let seenH = 0, seenK = 0, seenScore = 0, seenPh = -1;
+  let seenH = 0, seenK = 0, seenScore = 0, seenPh = -1, seenSl = 0;
+  const touchy = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
   const remote = [0, 0, 0, 0];
   const botMem = [{}, {}, {}, {}];
   let lastSentMask = -1;
@@ -314,7 +317,7 @@ export function start(opts) {
       if (snap.ph === 1) { snap.b.vy += BG * DT; snap.b.x += snap.b.vx * DT; snap.b.y = Math.min(GROUND - BR, snap.b.y + snap.b.vy * DT); }
       view.b.x += (snap.b.x - view.b.x) * 0.55; view.b.y += (snap.b.y - view.b.y) * 0.55;
       view.b.vx = snap.b.vx; view.b.vy = snap.b.vy;
-      Object.assign(view, { tick: view.tick + 1, ph: snap.ph, tm: snap.tm, sv: snap.sv, sc: snap.sc, win: snap.win, h: snap.h, k: snap.k });
+      Object.assign(view, { tick: view.tick + 1, ph: snap.ph, tm: snap.tm, sv: snap.sv, sc: snap.sc, win: snap.win, h: snap.h, k: snap.k, sl: snap.sl });
     }
     effects();
   }
@@ -328,6 +331,7 @@ export function start(opts) {
     const s = view; if (!s) return;
     if (s.h !== seenH) { seenH = s.h; snd(430 + Math.random() * 80, 0.09, "sine", 0.14, 160); }
     if (s.k !== seenK) { seenK = s.k; shake = 9; snd(180, 0.16, "square", 0.1, -90); snd(760, 0.08, "triangle", 0.1, -300); }
+    if ((s.sl | 0) !== seenSl) { seenSl = s.sl | 0; snd(900, 0.16, "sawtooth", 0.05, -700); }
     const sc = s.sc[0] + s.sc[1];
     if (sc !== seenScore) { seenScore = sc; shake = 6; jingle(snd, [660, 880], 100); }
     if (s.ph !== seenPh) { if (s.ph === 3) jingle(snd, [523, 659, 784, 1047], 130); seenPh = s.ph; }
@@ -341,13 +345,19 @@ export function start(opts) {
     const b = s.b;
     const air = p.y < GROUND - PR - 2;
     let sq = air ? Math.max(-0.16, Math.min(0.16, -p.vy / 5200)) : Math.sin(s.tick * 0.12 + i) * 0.025;
-    if (p.dv > 0) sq = -0.42; else if (p.rc > 0) sq = -0.42 + (12 - p.rc) * 0.035;
+    if (p.dv > 0) sq = -0.46; else if (p.rc > 0) sq = -0.46 + (11 - p.rc) * 0.04;
     ctx.fillStyle = "rgba(80,50,20,.18)";
     ctx.beginPath(); ctx.ellipse(p.x, GROUND + 4, PR * (0.95 - (GROUND - PR - p.y) / 700), 7, 0, 0, 7); ctx.fill();
     if (p.dv > 0) {
       // 슬라이딩 흙먼지
       ctx.fillStyle = "rgba(214,178,120,.7)";
-      for (let q = 1; q <= 3; q++) { ctx.beginPath(); ctx.arc(p.x - p.dd * (30 + q * 22), GROUND - 6 - q * 3, 12 - q * 2.5, 0, 7); ctx.fill(); }
+      for (let q = 1; q <= 4; q++) { ctx.beginPath(); ctx.arc(p.x - p.dd * (34 + q * 24), GROUND - 6 - q * 4, 15 - q * 2.6, 0, 7); ctx.fill(); }
+      // 잔상
+      ctx.globalAlpha = 0.22;
+      for (let q = 1; q <= 2; q++) paintMochi(ctx, p.x - p.dd * q * 30, p.y, PR, slotLook(i), { sq: -0.46 });
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.lineWidth = 3;
+      for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.moveTo(p.x - p.dd * 50, GROUND - 16 - q * 12); ctx.lineTo(p.x - p.dd * (95 + q * 14), GROUND - 16 - q * 12); ctx.stroke(); }
     }
     paintMochi(ctx, p.x, p.y, PR, slotLook(i), { ang: Math.atan2(b.y - p.y, b.x - p.x), sq, open: p.sm > 0 || p.dv > 0 });
     const name = slotName(i);
@@ -429,6 +439,12 @@ export function start(opts) {
       ctx.fillStyle = "#ff5d73"; ctx.fillText(msg, W / 2, 210);
       if (sub) { ctx.font = "700 34px Jua, sans-serif"; ctx.lineWidth = 8; ctx.strokeText(sub, W / 2, 258); ctx.fillStyle = "#4a3b33"; ctx.fillText(sub, W / 2, 258); }
     }
+    if (s.tick < 720 && s.ph !== 3 && !(kind === "online" && me >= s.mode)) {
+      ctx.font = "700 17px Jua, sans-serif"; ctx.textAlign = "center";
+      const tip = touchy ? "강타 버튼: 점프 중엔 강타 · 땅에서는 슬라이딩" : kind === "local" ? "1P F · 2P Enter: 점프 중엔 강타 · 땅에서는 슬라이딩" : "스페이스: 점프 중엔 강타 · 땅에서는 슬라이딩";
+      ctx.lineWidth = 5; ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.strokeText(tip, W / 2, H - 20);
+      ctx.fillStyle = "#4a3b33"; ctx.fillText(tip, W / 2, H - 20);
+    }
     if (kind === "online" && me >= s.mode) {
       ctx.font = "700 18px Jua, sans-serif"; ctx.fillStyle = "#4a3b33"; ctx.fillText("관전 중 — 다음 판에 참가해요", W / 2, H - 22);
     }
@@ -450,7 +466,7 @@ export function start(opts) {
       lastSentMask = -1;
     },
     stop() { stopLoop(); kb.stop(); pad.stop(); },
-    peek() { return { host: iAmHost(), tick: view ? view.tick : -1, sc: view ? view.sc : null }; },
+    peek() { return { host: iAmHost(), tick: view ? view.tick : -1, sc: view ? view.sc : null, sl: view ? view.sl : 0, p: view ? view.p.map((q) => [Math.round(q.x), q.dv, q.rc]) : [] }; },
   };
 }
 
