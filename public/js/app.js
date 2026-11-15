@@ -77,8 +77,15 @@ function playOffline(cfg) {
 function stopGame() { if (game) { game.stop(); game = null; } }
 
 // ── 온라인 ──
+const BASE = (SITE.server || "").replace(/\/$/, "");
+let serverOK = null; // 대전 서버가 살아 있는지 (null = 아직 모름)
+function needServer() {
+  if (serverOK !== false) return true;
+  toast("온라인 대전 서버는 준비 중이에요. 혼자 연습과 한 키보드 2인은 지금 돼요");
+  return false;
+}
 async function api(path) {
-  const r = await fetch(path, { cache: "no-store" });
+  const r = await fetch(BASE + path, { cache: "no-store" });
   if (!r.ok) throw new Error("api " + r.status);
   return r.json();
 }
@@ -87,7 +94,8 @@ function connect(code, { pub = false } = {}) {
   disconnect();
   leaving = false;
   const q = new URLSearchParams({ name: myName(), game: current.id, pub: pub ? "1" : "0" });
-  const sock = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/${code}?${q}`);
+  const wsBase = BASE ? BASE.replace(/^http/, "ws") : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+  const sock = new WebSocket(`${wsBase}/ws/${code}?${q}`);
   ws = sock;
   sock.onmessage = (e) => {
     const m = e.data;
@@ -176,9 +184,10 @@ function goHome() {
 async function loadStats() {
   try {
     const s = await api("/api/stats");
+    serverOK = true;
     $("online").hidden = !(s.online > 0);
     $("online").textContent = `지금 ${s.online}명 접속 중`;
-  } catch { $("online").hidden = true; }
+  } catch { serverOK = false; $("online").hidden = true; }
 }
 
 // ── 후원 ──
@@ -222,13 +231,16 @@ function init() {
   $("joinForm").addEventListener("submit", (e) => {
     e.preventDefault();
     const code = $("joinCode").value.trim().toUpperCase();
+    if (!needServer()) return;
     if (!/^[A-Z]{4}$/.test(code)) return toast("방 코드는 영문 4글자예요");
     connect(code);
   });
   $("mkRoom").addEventListener("click", async () => {
+    if (!needServer()) return;
     try { const r = await api("/api/new"); connect(r.code); } catch { toast("서버에 연결하지 못했어요"); }
   });
   $("quick").addEventListener("click", async () => {
+    if (!needServer()) return;
     try { const r = await api("/api/quick?game=" + current.id); connect(r.code, { pub: true }); if (r.fresh) toast("기다리는 사람이 없어 새 방을 열었어요"); }
     catch { toast("서버에 연결하지 못했어요"); }
   });
