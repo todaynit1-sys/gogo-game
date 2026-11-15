@@ -3,7 +3,7 @@ export const SITE = {
   name: "한판 오락실",
   // 온라인 대전 서버(Cloudflare Worker) 주소. 같은 곳에서 함께 돌리면 비워 둔다.
   // 예: "https://hanpan-arcade.내계정.workers.dev"
-  server: "",
+  server: "https://hanpan-arcade.hjsy.workers.dev",
   donate: {
     // 카카오페이 송금 링크 (카카오페이 앱 > 송금 > 내 송금코드 > 링크 복사). 비워 두면 표시 안 함.
     kakaopay: "",
