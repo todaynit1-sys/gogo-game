@@ -28,7 +28,7 @@ export const meta = {
   howto: [
     ["이동·점프", "방향키 또는 A·D·W"],
     ["강타", "점프한 채로 스페이스(또는 F). 아래 키를 같이 누르면 내리꽂고, 뒤쪽 키를 누르면 높이 넘겨요"],
-    ["슬라이딩", "땅에서 스페이스(또는 F, ↓)를 누르면 보는 방향으로 몸을 날려요. 좌우 키를 같이 누르면 그쪽으로. 멀리 떨어지는 공을 받을 때 써요"],
+    ["슬라이딩", "땅에서 스페이스(또는 F, ↓)를 누르면 보는 방향으로 몸을 날려요. 좌우 키를 같이 누르면 그쪽으로. 날아가는 길에 공이 있으면 상대 코트로 쳐 보내요"],
     ["한 키보드 2인", "1P: A·D·W·S + F / 2P: 방향키 + Enter"],
     ["휴대폰", "화면 아래 버튼. 강타 버튼은 점프 중엔 강타, 땅에서는 슬라이딩이에요"],
   ],
@@ -60,7 +60,7 @@ function stepPlayer(p, m) {
     p.vx = ((m & R ? 1 : 0) - (m & L ? 1 : 0)) * MOVE;
     if (p.vx) p.fd = p.vx > 0 ? 1 : -1;
     // 땅에서 강타 키(또는 아래 키)를 누르면 슬라이딩. 좌우 키를 같이 누르면 그쪽으로, 아니면 보는 방향으로.
-    if (m & (A | D) && !p.pa && onGround && !(m & U)) { p.dv = 18; p.dd = m & R ? 1 : m & L ? -1 : p.fd || 1; }
+    if (m & (A | D) && !p.pa && onGround && !(m & U)) { p.dv = 18; p.dh = 0; p.dd = m & R ? 1 : m & L ? -1 : p.fd || 1; }
     else if (m & U && onGround) p.vy = -JUMP;
   }
   p.pa = m & (A | D) ? 1 : 0;
@@ -109,6 +109,18 @@ function step(s, masks) {
   // 선수와 충돌
   for (let i = 0; i < s.p.length; i++) {
     const p = s.p[i];
+    if (p.dv > 0) {
+      // 슬라이딩 중에는 몸을 날린 앞쪽까지 닿는다. 경로에 공이 있으면 상대 코트로 쳐 보낸다(한 번만).
+      if (p.dh) continue;
+      const hx = p.x + p.dd * 26, hy = p.y - 10, reach = PR + 16 + BR;
+      if (Math.hypot(b.x - hx, b.y - hy) < reach || Math.hypot(b.x - p.x, b.y - p.y) < BR + PR) {
+        const dir = p.team === 0 ? 1 : -1;
+        b.vx = dir * 430 + p.dd * 110; b.vy = -730;
+        if (b.y > p.y - 6) b.y = p.y - 6;
+        p.dh = 1; s.k++; s.lh = s.tick;
+      }
+      continue;
+    }
     dx = b.x - p.x; dy = b.y - p.y; d = Math.hypot(dx, dy);
     if (d >= BR + PR) continue;
     if (d < 0.001) { dx = 0; dy = -1; d = 1; }
