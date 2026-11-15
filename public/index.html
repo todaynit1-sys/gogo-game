@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>한판 오락실 — 가입 없이 친구랑 바로 한 판</title>
+<meta name="description" content="설치도 가입도 없이, 링크 하나로 친구와 2~4명이 바로 즐기는 온라인 오락실.">
+<meta name="theme-color" content="#2b2d6e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css?v=1">
+</head>
+<body>
+<header class="top">
+  <button class="logo" id="goHome" type="button" aria-label="한판 오락실 첫 화면">
+    <svg viewBox="0 0 44 44" width="40" height="40" aria-hidden="true"><rect x="3" y="9" width="38" height="28" rx="9" fill="#ffc93c" stroke="#2b2d6e" stroke-width="3"/><circle cx="15" cy="23" r="5" fill="#ff5d73" stroke="#2b2d6e" stroke-width="2.5"/><circle cx="29" cy="19" r="3" fill="#2b2d6e"/><circle cx="33" cy="26" r="3" fill="#2b2d6e"/><rect x="19" y="2" width="6" height="9" rx="3" fill="#2b2d6e"/></svg>
+    <span>한판 오락실</span>
+  </button>
+  <div class="top-right">
+    <span class="online" id="online" hidden></span>
+    <button class="chip" id="muteBtn" type="button" aria-pressed="false">소리 켬</button>
+    <button class="chip chip-heart" id="donateBtn" type="button">후원하기</button>
+  </div>
+</header>
+
+<main>
+  <!-- 첫 화면: 게임 고르기 -->
+  <section class="view" id="v-home">
+    <div class="hero">
+      <h1>가입 없이,<br>친구랑 바로 한 판.</h1>
+      <p>게임을 고르고 링크만 보내면 끝. 2명부터 4명까지 같이 놀 수 있어요.</p>
+      <div class="namebox">
+        <label for="nick">닉네임</label>
+        <input id="nick" maxlength="10" autocomplete="off" placeholder="비워 두면 자동으로 지어 드려요">
+      </div>
+      <form class="joinbox" id="joinForm">
+        <label for="joinCode">초대받은 방 코드</label>
+        <div class="row">
+          <input id="joinCode" maxlength="4" autocomplete="off" placeholder="ABCD" inputmode="latin">
+          <button class="btn btn-navy" type="submit">들어가기</button>
+        </div>
+      </form>
+    </div>
+    <h2 class="sec">게임 고르기</h2>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <!-- 게임 소개 + 어떻게 놀지 고르기 -->
+  <section class="view" id="v-game" hidden>
+    <button class="back" data-go="home" type="button">← 다른 게임</button>
+    <div class="gamehead">
+      <div class="thumb big" id="gThumb"></div>
+      <div>
+        <h1 id="gName"></h1>
+        <p id="gDesc"></p>
+      </div>
+    </div>
+    <div class="modes">
+      <div class="mode">
+        <h3>친구랑 온라인</h3>
+        <p>방을 만들고 초대 링크를 보내세요. 빈자리는 봇이 채워요.</p>
+        <button class="btn btn-coral" id="mkRoom" type="button">방 만들기</button>
+      </div>
+      <div class="mode">
+        <h3>빠른 대전</h3>
+        <p>지금 기다리는 사람과 바로 붙어요. 없으면 내가 방을 열고 기다려요.</p>
+        <button class="btn btn-navy" id="quick" type="button">아무나 한 판</button>
+      </div>
+      <div class="mode">
+        <h3>혼자 연습</h3>
+        <p>봇과 1대1. 난이도를 골라 주세요.</p>
+        <div class="row wrap">
+          <button class="btn btn-line" data-solo="easy" type="button">쉬움</button>
+          <button class="btn btn-line" data-solo="normal" type="button">보통</button>
+          <button class="btn btn-line" data-solo="hard" type="button">어려움</button>
+        </div>
+      </div>
+      <div class="mode pc-only">
+        <h3>한 키보드로 둘이</h3>
+        <p>옆자리 친구와 같은 컴퓨터에서.</p>
+        <button class="btn btn-line" id="local2" type="button">2인 대전</button>
+      </div>
+    </div>
+    <div class="howto">
+      <h3>조작법</h3>
+      <ul>
+        <li><b>이동·점프</b> 방향키 또는 A·D·W</li>
+        <li><b>강타</b> 스페이스 또는 F — 점프한 채로 공을 맞히면 내리꽂아요</li>
+        <li><b>한 키보드 2인</b> 1P: A·D·W + F / 2P: 방향키 + Enter</li>
+        <li><b>휴대폰</b> 화면 아래 버튼으로 조작해요</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 방 대기실 -->
+  <section class="view" id="v-room" hidden>
+    <button class="back" id="leaveRoom" type="button">← 방 나가기</button>
+    <div class="roomhead">
+      <div>
+        <p class="eyebrow" id="rGame"></p>
+        <h1>방 코드 <span class="code" id="rCode"></span></h1>
+      </div>
+      <button class="btn btn-coral" id="copyLink" type="button">초대 링크 복사</button>
+    </div>
+    <div class="seats" id="seats"></div>
+    <div class="roomopts" id="roomOpts">
+      <div class="opt">
+        <span class="optlabel">경기 방식</span>
+        <div class="seg" id="modeSeg">
+          <button type="button" data-mode="0">자동</button>
+          <button type="button" data-mode="2">1대1</button>
+          <button type="button" data-mode="4">2대2</button>
+        </div>
+      </div>
+      <label class="opt check"><input type="checkbox" id="pubChk"> <span>빠른 대전으로 아무나 들어올 수 있게</span></label>
+    </div>
+    <p class="hint" id="roomHint"></p>
+    <button class="btn btn-coral btn-big" id="startBtn" type="button">게임 시작</button>
+  </section>
+
+  <!-- 게임 화면 -->
+  <section class="view play" id="v-play" hidden>
+    <div class="playbar">
+      <button class="back" id="exitPlay" type="button">← 나가기</button>
+      <span id="playInfo"></span>
+    </div>
+    <div class="stage">
+      <canvas id="cv" width="960" height="540"></canvas>
+      <div class="result" id="result" hidden>
+        <h2 id="resTitle"></h2>
+        <div class="row">
+          <button class="btn btn-coral" id="again" type="button">한 판 더</button>
+          <button class="btn btn-line" id="resExit" type="button">그만하기</button>
+        </div>
+      </div>
+    </div>
+    <div class="touch" id="touch"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>저장도 가입도 없어요. 창을 닫으면 기록은 사라집니다.</span>
+</footer>
+
+<div class="modal" id="donateModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+    <h2 id="dTitle">오락실에 동전 한 닢</h2>
+    <p>한판 오락실은 누구나 무료로 놀 수 있어요. 재밌게 놀았다면 서버비에 보탬을 주세요. 후원하지 않아도 모든 게임은 그대로 즐길 수 있어요.</p>
+    <div class="dlist" id="dList"></div>
+    <button class="btn btn-line" id="dClose" type="button">닫기</button>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/js/app.js?v=1"></script>
+</body>
+</html>
