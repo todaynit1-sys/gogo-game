@@ -5,7 +5,7 @@ import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=1";
 import { drawMochi, parseLook } from "../avatar.js?v=2";
 import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=1";
 
-const W = 960, H = 540, COLW = 4, NC = 240, GRAV = 0.12, WINDK = 0.012, START = 100, TURN = 20 * 60, FUEL = 70;
+const W = 960, H = 540, COLW = 4, NC = 240, GRAV = 0.12, WINDK = 0.012, START = 100, TURN = 20 * 60, FUEL = 180;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ty = (s, x) => s.h[clamp(Math.round(x / COLW), 0, NC - 1)];
 const speedOf = (pw) => 2.5 + pw * 0.105;
@@ -111,8 +111,12 @@ function step(s, masks) {
     if (m & (L | R)) {
       const dir = m & L ? -1 : 1; p.f = dir;
       if (p.fuel > 0 && !p.pw) {
-        const nx = clamp(p.x + dir * 1.1, 16, W - 16);
-        if (ty(s, nx) - ty(s, p.x) > -9) { p.x = nx; p.fuel -= 1.1; }      // 너무 가파른 오르막은 못 오른다
+        // 앞쪽 한 칸의 높이 차로 비탈을 본다. 가파르면 느리고 연료가 더 들고, 절벽(30 넘게)만 못 오른다.
+        const rise = ty(s, p.x) - ty(s, clamp(p.x + dir * COLW, 0, W));
+        if (rise <= 30) {
+          const sp = rise > 10 ? 1 : 2;
+          p.x = clamp(p.x + dir * sp, 16, W - 16); p.fuel -= rise > 10 ? 2.5 : 2;
+        }
       }
     }
     if (m & U) p.el = Math.min(88, p.el + 0.7);
@@ -254,6 +258,9 @@ function draw(ctx, v, env) {
     if (aiming && i === v.turn) {
       const by = y - 92 + Math.sin(env.t * 6) * 4;
       ctx.fillStyle = SEAT_DARK[i]; ctx.beginPath(); ctx.moveTo(x - 9, by); ctx.lineTo(x + 9, by); ctx.lineTo(x, by + 11); ctx.fill();
+      // 연료 (이동할 수 있는 양)
+      ctx.fillStyle = "rgba(43,45,110,.85)"; rr(ctx, x - 24, y + 22, 48, 8, 4); ctx.fill();
+      ctx.fillStyle = "#6ec6ff"; rr(ctx, x - 22, y + 24, Math.max(0, (44 * p.fuel) / FUEL), 4, 2); ctx.fill();
       if (p.pw > 0) {       // 힘 게이지
         ctx.fillStyle = "#fff"; rr(ctx, x - 32, y + 8, 64, 11, 5); ctx.fill();
         ctx.fillStyle = "#ff5d73"; rr(ctx, x - 30, y + 10, Math.max(2, 60 * p.pw / 100), 7, 3.5); ctx.fill();
@@ -336,7 +343,7 @@ export const meta = {
   hint: (n) => (n === 1 ? "혼자 시작하면 봇과 붙어요. 친구를 기다리려면 초대 링크를 보내세요." : `${n}명이 번갈아 쏴요. 마지막까지 버티면 승리.`),
   howto: [
     ["목표", "번갈아 가며 포탄을 쏴서 상대의 체력을 0으로 만들어요. 마지막까지 남으면 승리"],
-    ["조작", "←→ 이동(연료만큼), ↑↓ 포신 각도, 스페이스를 꾹 눌러 힘을 모았다가 떼면 발사"],
+    ["조작", "←→ 이동(대포 아래 파란 연료 막대만큼, 차례마다 다시 참), ↑↓ 포신 각도, 스페이스를 꾹 눌러 힘을 모았다가 떼면 발사"],
     ["포탄", "Q로 바꿔요. 기본탄(무제한), 대왕탄(크게 터짐), 세발탄(세 발이 퍼짐), 굴착탄(땅을 깊이 팜), 통통탄(두 번 튄 뒤 터짐). 특수탄은 두 발씩"],
     ["지형", "판마다 언덕·큰 산·골짜기·계단·협곡 가운데 하나가 나오고, 낮·노을·밤·눈밭으로 분위기가 바뀌어요. 차례마다 바람도 바뀌어요"],
     ["한 키보드 2인", "1P: W·A·S·D + F, 포탄 Q / 2P: 방향키 + Enter, 포탄 마침표(.)"],
