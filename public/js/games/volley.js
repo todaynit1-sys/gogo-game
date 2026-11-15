@@ -13,6 +13,12 @@ const WIN_SCORE = 7;
 const L = 1, R = 2, U = 4, A = 8, D = 16;
 const HOME = { 2: [240, 720], 4: [310, 650, 130, 830] };
 const SKILL = { easy: 0.45, normal: 0.7, hard: 0.93 };
+const COURTS = [
+  { name: "해변", sky: ["#6ec6ff", "#e4f6ff"], sun: "#fff3b0", cloud: "rgba(255,255,255,.9)", hill: ["#a8e0a0", "#8fd18a"], floor: "#f6dca6", edge: "#e9c887" },
+  { name: "노을", sky: ["#ff9a76", "#ffe3b0"], sun: "#fff0c2", cloud: "rgba(255,236,214,.8)", hill: ["#e9a36b", "#d98a5a"], floor: "#f3c98b", edge: "#dba866" },
+  { name: "달밤", sky: ["#1f2463", "#5b4f9e"], sun: "#fff6c8", cloud: "rgba(200,205,255,.3)", hill: ["#3d4a8a", "#33407a"], floor: "#8f93c4", edge: "#7377ab", night: true },
+  { name: "체육관", sky: ["#f3e3c3", "#fbf2de"], floor: "#e0a868", edge: "#c48a48", gym: true },
+];
 
 export const meta = {
   local: true,
@@ -36,7 +42,7 @@ export const meta = {
 
 // ── 상태 ──────────────────────────────────────────────
 function newState(mode) {
-  const s = { tick: 0, mode, ph: 0, tm: 50, sv: 0, sc: [0, 0], win: -1, h: 0, k: 0, sl: 0, lh: -99, p: [], b: { x: 0, y: 0, vx: 0, vy: 0 } };
+  const s = { tick: 0, mode, ph: 0, tm: 50, sv: 0, sc: [0, 0], win: -1, h: 0, k: 0, sl: 0, th: (Math.random() * COURTS.length) | 0, lh: -99, p: [], b: { x: 0, y: 0, vx: 0, vy: 0 } };
   for (let i = 0; i < mode; i++) s.p.push({ x: HOME[mode][i], y: GROUND - PR, vx: 0, vy: 0, sm: 0, dv: 0, dd: 1, rc: 0, pa: 0, fd: i % 2 ? -1 : 1, team: i % 2 });
   resetRound(s, Math.random() < 0.5 ? 0 : 1);
   return s;
@@ -163,15 +169,15 @@ function step(s, masks) {
 
 // ── 네트워크용 압축 ────────────────────────────────────
 function encode(s) {
-  const a = [s.tick, s.mode, s.ph, s.tm, s.sv, s.sc[0], s.sc[1], s.win, s.h, s.k, Math.round(s.b.x), Math.round(s.b.y), Math.round(s.b.vx), Math.round(s.b.vy), s.sl];
+  const a = [s.tick, s.mode, s.ph, s.tm, s.sv, s.sc[0], s.sc[1], s.win, s.h, s.k, Math.round(s.b.x), Math.round(s.b.y), Math.round(s.b.vx), Math.round(s.b.vy), s.sl, s.th | 0];
   for (const p of s.p) a.push(Math.round(p.x), Math.round(p.y), Math.round(p.vx), Math.round(p.vy), p.sm, p.dv, p.rc);
   return "s" + JSON.stringify(a);
 }
 
 function decode(str) {
   const a = JSON.parse(str.slice(1));
-  const s = { tick: a[0], mode: a[1], ph: a[2], tm: a[3], sv: a[4], sc: [a[5], a[6]], win: a[7], h: a[8], k: a[9], lh: a[0], b: { x: a[10], y: a[11], vx: a[12], vy: a[13] }, sl: a[14], p: [] };
-  for (let i = 0, j = 15; i < s.mode; i++, j += 7) {
+  const s = { tick: a[0], mode: a[1], ph: a[2], tm: a[3], sv: a[4], sc: [a[5], a[6]], win: a[7], h: a[8], k: a[9], lh: a[0], b: { x: a[10], y: a[11], vx: a[12], vy: a[13] }, sl: a[14], th: a[15] | 0, p: [] };
+  for (let i = 0, j = 16; i < s.mode; i++, j += 7) {
     s.p.push({ x: a[j], y: a[j + 1], vx: a[j + 2], vy: a[j + 3], sm: a[j + 4], dv: a[j + 5], rc: a[j + 6], dd: a[j + 2] < 0 ? -1 : 1, fd: a[j + 2] < 0 ? -1 : 1, pa: 0, team: i % 2 });
   }
   return s;
@@ -248,7 +254,7 @@ export function start(opts) {
   const remote = [0, 0, 0, 0];
   const botMem = [{}, {}, {}, {}];
   let lastSentMask = -1;
-  const trail = [];
+  const trail = [], sparks = [];
   const clouds = [0, 1, 2, 3].map((i) => ({ x: i * 270 + 40, y: 50 + (i % 2) * 46, s: 0.8 + (i % 3) * 0.25 }));
 
   const iAmHost = () => kind !== "online" || (room && room.host === room.you);
@@ -329,7 +335,7 @@ export function start(opts) {
       if (snap.ph === 1) { snap.b.vy += BG * DT; snap.b.x += snap.b.vx * DT; snap.b.y = Math.min(GROUND - BR, snap.b.y + snap.b.vy * DT); }
       view.b.x += (snap.b.x - view.b.x) * 0.55; view.b.y += (snap.b.y - view.b.y) * 0.55;
       view.b.vx = snap.b.vx; view.b.vy = snap.b.vy;
-      Object.assign(view, { tick: view.tick + 1, ph: snap.ph, tm: snap.tm, sv: snap.sv, sc: snap.sc, win: snap.win, h: snap.h, k: snap.k, sl: snap.sl });
+      Object.assign(view, { tick: view.tick + 1, ph: snap.ph, tm: snap.tm, sv: snap.sv, sc: snap.sc, win: snap.win, h: snap.h, k: snap.k, sl: snap.sl, th: snap.th });
     }
     effects();
   }
@@ -342,7 +348,7 @@ export function start(opts) {
   function effects() {
     const s = view; if (!s) return;
     if (s.h !== seenH) { seenH = s.h; snd(430 + Math.random() * 80, 0.09, "sine", 0.14, 160); }
-    if (s.k !== seenK) { seenK = s.k; shake = 9; snd(180, 0.16, "square", 0.1, -90); snd(760, 0.08, "triangle", 0.1, -300); }
+    if (s.k !== seenK) { seenK = s.k; shake = 9; sparks.push({ x: s.b.x, y: s.b.y, t: 0 }); snd(180, 0.16, "square", 0.1, -90); snd(760, 0.08, "triangle", 0.1, -300); }
     if ((s.sl | 0) !== seenSl) { seenSl = s.sl | 0; snd(900, 0.16, "sawtooth", 0.05, -700); }
     const sc = s.sc[0] + s.sc[1];
     if (sc !== seenScore) { seenScore = sc; shake = 6; jingle(snd, [660, 880], 100); }
@@ -384,19 +390,34 @@ export function start(opts) {
     ctx = fit(canvas, W, H);
     const s = view;
     const t = performance.now() / 1000;
+    const th = COURTS[(s && s.th) | 0] || COURTS[0];
     const g = ctx.createLinearGradient(0, 0, 0, GROUND);
-    g.addColorStop(0, "#6ec6ff"); g.addColorStop(1, "#e4f6ff");
+    g.addColorStop(0, th.sky[0]); g.addColorStop(1, th.sky[1]);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#fff3b0"; ctx.beginPath(); ctx.arc(820, 86, 44, 0, 7); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,.9)";
-    for (const c of clouds) {
-      const x = ((c.x + t * 9 * c.s) % (W + 200)) - 100;
-      ctx.beginPath(); ctx.ellipse(x, c.y, 46 * c.s, 17 * c.s, 0, 0, 7); ctx.ellipse(x + 30 * c.s, c.y - 12 * c.s, 30 * c.s, 17 * c.s, 0, 0, 7); ctx.ellipse(x - 30 * c.s, c.y - 6 * c.s, 24 * c.s, 13 * c.s, 0, 0, 7); ctx.fill();
+    if (th.gym) {
+      // 체육관: 벽 줄무늬, 창문, 관중석 난간
+      ctx.fillStyle = "rgba(180,140,90,.16)"; for (let x = 0; x < W; x += 80) ctx.fillRect(x, 0, 40, GROUND);
+      ctx.fillStyle = "#bfe3ff"; ctx.strokeStyle = "#8a5a3c"; ctx.lineWidth = 6;
+      for (const x of [110, 330, 550, 770]) { ctx.beginPath(); ctx.roundRect(x, 60, 90, 110, 12); ctx.fill(); ctx.stroke(); }
+      ctx.fillStyle = "#8a5a3c"; ctx.fillRect(0, GROUND - 110, W, 8);
+    } else {
+      if (th.night) {
+        ctx.fillStyle = "rgba(255,255,255,.85)";
+        for (let i = 0; i < 40; i++) { ctx.beginPath(); ctx.arc((i * 211) % W, (i * 83) % 250, 1 + ((i * 7) % 3) * 0.5, 0, 7); ctx.fill(); }
+      }
+      ctx.fillStyle = th.sun; ctx.beginPath(); ctx.arc(820, 86, th.night ? 34 : 44, 0, 7); ctx.fill();
+      if (th.night) { ctx.fillStyle = th.sky[0]; ctx.beginPath(); ctx.arc(806, 78, 30, 0, 7); ctx.fill(); }
+      ctx.fillStyle = th.cloud;
+      for (const c of clouds) {
+        const x = ((c.x + t * 9 * c.s) % (W + 200)) - 100;
+        ctx.beginPath(); ctx.ellipse(x, c.y, 46 * c.s, 17 * c.s, 0, 0, 7); ctx.ellipse(x + 30 * c.s, c.y - 12 * c.s, 30 * c.s, 17 * c.s, 0, 0, 7); ctx.ellipse(x - 30 * c.s, c.y - 6 * c.s, 24 * c.s, 13 * c.s, 0, 0, 7); ctx.fill();
+      }
+      ctx.fillStyle = th.hill[0]; ctx.beginPath(); ctx.ellipse(200, GROUND + 30, 330, 120, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = th.hill[1]; ctx.beginPath(); ctx.ellipse(760, GROUND + 40, 380, 140, 0, 0, 7); ctx.fill();
     }
-    ctx.fillStyle = "#a8e0a0"; ctx.beginPath(); ctx.ellipse(200, GROUND + 30, 330, 120, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = "#8fd18a"; ctx.beginPath(); ctx.ellipse(760, GROUND + 40, 380, 140, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = "#f6dca6"; ctx.fillRect(0, GROUND, W, H - GROUND);
-    ctx.fillStyle = "#e9c887"; ctx.fillRect(0, GROUND, W, 6);
+    ctx.fillStyle = th.floor; ctx.fillRect(0, GROUND, W, H - GROUND);
+    ctx.fillStyle = th.edge; ctx.fillRect(0, GROUND, W, 6);
+    if (th.gym) { ctx.fillStyle = "rgba(255,255,255,.7)"; ctx.fillRect(0, GROUND + 26, W, 4); }
 
     if (!s) {
       ctx.fillStyle = "#4a3b33"; ctx.font = "700 30px Jua, sans-serif"; ctx.textAlign = "center";
@@ -428,6 +449,13 @@ export function start(opts) {
     ctx.restore();
     ctx.restore();
 
+    // 강타 불꽃
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const q = sparks[i]; q.t++;
+      if (q.t > 14) { sparks.splice(i, 1); continue; }
+      ctx.strokeStyle = `rgba(255,${200 - q.t * 8},60,${1 - q.t / 14})`; ctx.lineWidth = 5; ctx.lineCap = "round";
+      for (let k = 0; k < 8; k++) { const an = (k / 8) * 6.283 + 0.3, r0 = 10 + q.t * 4, r1 = r0 + 14; ctx.beginPath(); ctx.moveTo(q.x + Math.cos(an) * r0, q.y + Math.sin(an) * r0); ctx.lineTo(q.x + Math.cos(an) * r1, q.y + Math.sin(an) * r1); ctx.stroke(); }
+    }
     // 점수판
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,255,255,.88)"; rr(ctx, W / 2 - 110, 14, 220, 62, 18); ctx.fill();
@@ -436,7 +464,11 @@ export function start(opts) {
     ctx.fillStyle = SEAT_DARK[1]; ctx.fillText(s.sc[1], W / 2 + 56, 62);
     ctx.fillStyle = "#4a3b33"; ctx.fillText(":", W / 2, 58);
     ctx.font = "700 15px Jua, sans-serif"; ctx.fillStyle = "#4a3b33";
-    ctx.fillText(WIN_SCORE + "점 먼저 내면 승리", W / 2, 96);
+    ctx.fillText(WIN_SCORE + "점 먼저 내면 승리 · " + th.name, W / 2, 96);
+    if (s.ph !== 3 && Math.max(s.sc[0], s.sc[1]) === WIN_SCORE - 1) {
+      ctx.font = "700 22px Jua, sans-serif"; ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; ctx.strokeText("매치 포인트!", W / 2, 124);
+      ctx.fillStyle = "#ff5d73"; ctx.fillText("매치 포인트!", W / 2, 124);
+    }
 
     let msg = "", sub = "";
     if (s.ph === 0 && s.tick < 60) msg = "준비!";

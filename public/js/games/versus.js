@@ -13,9 +13,9 @@
 import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, label, BOT_NAMES } from "./kit.js?v=1";
 import { drawMochi, parseLook } from "../avatar.js?v=2";
 
-const K_SOLO = { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", ArrowDown: "D", KeyS: "D", ArrowUp: "rot", KeyW: "rot", KeyX: "rot", KeyZ: "rot2", Space: "drop", Enter: "drop" };
-const K_P1 = { KeyA: "L", KeyD: "R", KeyS: "D", KeyW: "rot", KeyG: "rot2", KeyF: "drop" };
-const K_P2 = { ArrowLeft: "L", ArrowRight: "R", ArrowDown: "D", ArrowUp: "rot", ShiftRight: "rot2", Enter: "drop", Slash: "drop" };
+const K_SOLO = { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", ArrowDown: "D", KeyS: "D", ArrowUp: "rot", KeyW: "rot", KeyX: "rot", KeyZ: "rot2", Space: "drop", Enter: "drop", KeyC: "hold", ShiftLeft: "hold" };
+const K_P1 = { KeyA: "L", KeyD: "R", KeyS: "D", KeyW: "rot", KeyG: "rot2", KeyF: "drop", KeyQ: "hold" };
+const K_P2 = { ArrowLeft: "L", ArrowRight: "R", ArrowDown: "D", ArrowUp: "rot", ShiftRight: "rot2", Enter: "drop", Slash: "drop", Period: "hold" };
 
 export function startVersus(G, opts) {
   const { canvas, kind } = opts;
@@ -84,6 +84,7 @@ export function startVersus(G, opts) {
     if (!targets.length) return;
     const target = targets[seat.rr++ % targets.length];
     target.hit = 0.45;
+    seat.pop = { n, t: 0 }; seat.sent = (seat.sent || 0) + n;
     if (target.board) G.attackIn(target.board, n);
     else net({ t: "a", to: target.slot, n }, seat);
   }
@@ -98,7 +99,7 @@ export function startVersus(G, opts) {
 
   function tick(dt) {
     t += dt;
-    for (const s of seats) if (s.hit > 0) s.hit -= dt;
+    for (const s of seats) { if (s.hit > 0) s.hit -= dt; if (s.pop && (s.pop.t += dt) > 1.2) s.pop = null; }
     if (phase === "count") {
       count -= dt;
       const c = Math.ceil(count - 0.2);
@@ -213,6 +214,8 @@ export function startVersus(G, opts) {
       label(ctx, "탈락", r.x + w / 2, r.y + h / 2, r.mini ? Math.max(14, cell * 1.6) : 40, "#fff", "#2b2d6e");
     }
     if (phase === "over" && winner === s.slot) label(ctx, "승리!", r.x + w / 2, r.y + h / 2, r.mini ? Math.max(14, cell * 1.6) : 46, "#ffc93c", "#2b2d6e");
+    if (s.pop) label(ctx, "공격 +" + s.pop.n, r.x + w / 2, r.y + h * 0.3 - s.pop.t * 40, r.mini ? 14 : 30, "#ff5d73", "#fff");
+    if (s.board && s.sent) label(ctx, "보낸 공격 " + s.sent, r.x + w, r.y - ns * 0.55, r.mini ? 11 : 14, "#6b6480", null, "right");
     if (s.board && !r.mini) {
       label(ctx, "다음", r.nx + cell * 1.6, r.ny + 16, 16, "#2b2d6e", null);
       G.drawNext(ctx, s.board, r.nx, r.ny + 26, cell * 0.78);

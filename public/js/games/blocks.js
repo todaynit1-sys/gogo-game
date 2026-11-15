@@ -2,6 +2,7 @@
 // 2칸부터 5칸까지 12가지 모양, 가로 9칸 × 세로 18칸.
 
 import { startVersus } from "./versus.js?v=1";
+import { label } from "./kit.js?v=1";
 
 const COLS = 9, ROWS = 18, HID = 3, TR = ROWS + HID;
 const SHAPES = [
@@ -46,9 +47,10 @@ function fill(b) {
   }
 }
 
-function spawn(b) {
+function spawn(b, keep) {
   fill(b);
-  const id = b.next.shift(); fill(b);
+  let id = keep;
+  if (id == null) { id = b.next.shift(); fill(b); b.held = false; }
   const sh = SHAPES[id], c = sh.c.map((p) => p.slice());
   const maxY = Math.max(...c.map((p) => p[1]));
   b.cur = { id, n: sh.n, c, x: Math.floor((COLS - sh.n) / 2), y: HID - 1 - maxY, r: 0 };
@@ -57,7 +59,7 @@ function spawn(b) {
 }
 
 function create() {
-  const b = { g: new Uint8Array(COLS * TR), cur: null, next: [], bag: [], alive: true, out: 0, pending: 0, ev: [], soft: false, fallT: 0, lockT: 0, lockMoves: 0, time: 0, combo: 0, seq: 0, hole: (Math.random() * COLS) | 0, flash: 0 };
+  const b = { g: new Uint8Array(COLS * TR), cur: null, next: [], bag: [], alive: true, out: 0, pending: 0, ev: [], soft: false, fallT: 0, lockT: 0, lockMoves: 0, time: 0, combo: 0, seq: 0, hole: (Math.random() * COLS) | 0, flash: 0, hold: -1, held: false };
   spawn(b);
   return b;
 }
@@ -84,6 +86,13 @@ function act(b, a) {
       }
     }
     return false;
+  }
+  if (a === "hold") {
+    // 보관: 지금 블록을 넣어 두고 보관해 둔 블록(없으면 다음 블록)을 꺼낸다. 블록 하나에 한 번만.
+    if (b.held) return false;
+    const prev = b.hold; b.hold = p.id;
+    spawn(b, prev >= 0 ? prev : undefined);
+    b.held = true; b.ev.push("rot"); return true;
   }
   if (a === "drop") {
     while (!hits(b.g, p.c, p.x, p.y + 1)) p.y++;
@@ -155,7 +164,8 @@ function view(b) {
     c = [colorOf(p.id)]; gh = [];
     for (const [cx, cy] of p.c) { c.push(p.x + cx, p.y + cy - HID); gh.push(p.x + cx, gy + cy - HID); }
   }
-  return { g, c, gh, al: b.alive, fl: b.flash > 0 };
+  const top = g.search(/[1-9]/);
+  return { g, c, gh, al: b.alive, fl: b.flash > 0, dg: top >= 0 && top < 5 * COLS, cb: b.flash > 0 && b.combo > 1 ? b.combo : 0 };
 }
 const encode = (v) => JSON.stringify({ g: v.g, c: v.c, al: v.al });
 const decode = (s) => JSON.parse(s);
@@ -182,6 +192,11 @@ function draw(ctx, v, x, y, cell, t, mini) {
   }
   if (v.c) for (let i = 1; i < v.c.length; i += 2) if (v.c[i + 1] >= 0) block(ctx, x + v.c[i] * cell, y + v.c[i + 1] * cell, cell, v.c[0], mini);
   if (v.fl) { ctx.fillStyle = "rgba(255,255,255,.25)"; ctx.fillRect(x, y, COLS * cell, ROWS * cell); }
+  if (v.dg && !mini && v.al) {       // 많이 쌓이면 위쪽이 빨갛게 깜빡인다
+    ctx.fillStyle = `rgba(255,93,115,${0.12 + 0.12 * Math.sin(t * 9)})`; ctx.fillRect(x, y, COLS * cell, 5 * cell);
+    ctx.strokeStyle = "#ff5d73"; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(x, y + 5 * cell); ctx.lineTo(x + COLS * cell, y + 5 * cell); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (v.cb && !mini) label(ctx, v.cb + "콤보!", x + (COLS * cell) / 2, y + ROWS * cell * 0.45, 40, "#ffd24a", "#2b2d6e");
 }
 
 function drawNext(ctx, b, x, y, cell) {
@@ -190,6 +205,16 @@ function drawNext(ctx, b, x, y, cell) {
     const sh = SHAPES[id], s = i === 0 ? cell : cell * 0.8;
     const minY = Math.min(...sh.c.map((p) => p[1]));
     for (const [cx, cy] of sh.c) block(ctx, x + cx * s, y + i * cell * 3.1 + (cy - minY) * s, s, colorOf(id), false);
+  }
+  // 보관함
+  const hy = y + cell * 9.6;
+  label(ctx, "보관", x + cell * 1.6, hy, 16, "#2b2d6e", null);
+  ctx.strokeStyle = "rgba(43,45,110,.35)"; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.strokeRect(x - 2, hy + 8, cell * 3.4, cell * 2.8); ctx.setLineDash([]);
+  if (b.hold >= 0) {
+    const sh = SHAPES[b.hold], s = cell * 0.8, minY = Math.min(...sh.c.map((p) => p[1]));
+    ctx.globalAlpha = b.held ? 0.4 : 1;
+    for (const [cx, cy] of sh.c) block(ctx, x + 4 + cx * s, hy + 16 + (cy - minY) * s, s, colorOf(b.hold), false);
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -243,7 +268,8 @@ export const meta = {
   howto: [
     ["목표", "가로줄을 꽉 채우면 지워져요. 두 줄 이상 한꺼번에 지우면 상대 판에 방해 줄이 올라가요"],
     ["조작", "좌우 이동 ←→ (A·D), 돌리기 ↑ (W), 천천히 내리기 ↓ (S), 바로 떨구기 스페이스"],
-    ["한 키보드 2인", "1P: A·D·S·W + F(떨구기) / 2P: 방향키 + Enter(떨구기)"],
+    ["보관", "C(또는 왼쪽 Shift)를 누르면 지금 블록을 보관함에 넣고 보관해 둔 블록을 꺼내요. 블록 하나에 한 번만"],
+    ["한 키보드 2인", "1P: A·D·S·W + F(떨구기), Q(보관) / 2P: 방향키 + Enter(떨구기), 마침표(보관)"],
     ["휴대폰", "화면 아래 버튼으로 조작해요"],
   ],
 };

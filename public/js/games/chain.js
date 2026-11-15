@@ -58,7 +58,7 @@ function spawn(b) {
 }
 
 function create() {
-  const b = { g: new Uint8Array(COLS * TR), cur: null, next: [], alive: true, out: 0, pending: 0, ev: [], soft: false, st: "fall", stT: 0, fallT: 0, lockT: 0, lockMoves: 0, time: 0, seq: 0, chain: 0, turnAtk: 0, pops: null };
+  const b = { g: new Uint8Array(COLS * TR), cur: null, next: [], alive: true, out: 0, pending: 0, ev: [], soft: false, st: "fall", stT: 0, fallT: 0, lockT: 0, lockMoves: 0, time: 0, seq: 0, chain: 0, turnAtk: 0, pops: null, ac: 0 };
   spawn(b);
   return b;
 }
@@ -106,6 +106,8 @@ function resolve(b) {
     b.ev.push("c" + b.chain);
     return;
   }
+  // 판을 전부 비우면 큰 공격 보너스
+  if (b.chain > 0 && !b.g.some((v) => v)) { b.turnAtk += 21; b.ac = 1.4; b.ev.push("c9"); }
   // 이번 차례 끝: 공격 정산
   const use = Math.min(b.pending, b.turnAtk); b.pending -= use; b.out += b.turnAtk - use;
   if (b.pending > 0 && b.chain === 0) {
@@ -128,7 +130,7 @@ function resolve(b) {
 
 function step(b, dt) {
   if (!b.alive) return;
-  b.time += dt;
+  b.time += dt; if (b.ac > 0) b.ac -= dt;
   if (b.st === "pop") {
     b.stT -= dt;
     if (b.stT <= 0) { for (const j of b.pops) b.g[j] = 0; b.pops = null; gravity(b.g); b.st = "settle"; b.stT = 0.16; }
@@ -158,9 +160,9 @@ function view(b) {
     if (sx === p.x) { const low = sy > p.y; gh = [p.a, p.x, land(p.x, low ? 1 : 0) - HID, p.b, sx, land(sx, low ? 0 : 1) - HID]; }
     else gh = [p.a, p.x, land(p.x, 0) - HID, p.b, sx, land(sx, 0) - HID];
   }
-  return { g, c, gh, al: b.alive, ch: b.st === "pop" ? b.chain : 0 };
+  return { g, c, gh, al: b.alive, ch: b.st === "pop" ? b.chain : 0, ac: b.ac > 0, dg: b.g[idx(SPAWN_X, HID + 2)] > 0 };
 }
-const encode = (v) => JSON.stringify({ g: v.g, c: v.c, al: v.al, ch: v.ch });
+const encode = (v) => JSON.stringify({ g: v.g, c: v.c, al: v.al, ch: v.ch, ac: v.ac });
 const decode = (s) => JSON.parse(s);
 const blank = () => ({ g: "0".repeat(COLS * ROWS), c: null, al: true, ch: 0 });
 
@@ -188,7 +190,11 @@ function draw(ctx, v, x, y, cell, t, mini) {
   if (v.gh && !mini) for (let i = 0; i < 6; i += 3) if (v.gh[i + 2] >= 0) { ctx.fillStyle = PAL[v.gh[i]]; ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.arc(x + (v.gh[i + 1] + 0.5) * cell, y + (v.gh[i + 2] + 0.5) * cell, cell * 0.16, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
   if (v.c) for (let i = 0; i < 6; i += 3) if (v.c[i + 2] >= 0) blob(ctx, x + (v.c[i + 1] + 0.5) * cell, y + (v.c[i + 2] + 0.5) * cell, cell, v.c[i], mini, false, t);
   // 숨 막히는 자리 표시 (여기가 막히면 탈락)
-  if (!mini) { ctx.strokeStyle = "rgba(255,93,115,.6)"; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.strokeRect(x + SPAWN_X * cell + 3, y + 3, cell - 6, cell - 6); ctx.setLineDash([]); }
+  if (!mini) {
+    if (v.dg && v.al) { ctx.fillStyle = `rgba(255,93,115,${0.18 + 0.16 * Math.sin(t * 9)})`; ctx.fillRect(x + SPAWN_X * cell, y, cell, cell * 3); }      // 가운데 줄이 높이 쌓이면 경고
+    ctx.strokeStyle = "rgba(255,93,115,.6)"; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.strokeRect(x + SPAWN_X * cell + 3, y + 3, cell - 6, cell - 6); ctx.setLineDash([]);
+  }
+  if (v.ac) label(ctx, "전부 지움!", x + (COLS * cell) / 2, y + ROWS * cell * 0.55, mini ? Math.max(12, cell * 1.4) : 40, "#7ddc7a", "#2b2d6e");
   if (v.ch >= 2) label(ctx, v.ch + "연쇄!", x + (COLS * cell) / 2, y + ROWS * cell * 0.4, mini ? Math.max(12, cell * 1.5) : 44, "#ffd24a", "#2b2d6e");
 }
 
@@ -252,6 +258,7 @@ export const meta = {
   howto: [
     ["목표", "같은 색 떡을 넷 이상 이으면 터져요. 터진 뒤 내려앉은 떡이 또 터지면 연쇄! 연쇄가 길수록 상대에게 돌떡이 많이 떨어져요"],
     ["탈락", "가운데 맨 윗칸(빨간 점선)이 막히면 끝"],
+    ["보너스", "판을 전부 비우면 '전부 지움!' — 돌떡 세 줄이 상대에게 떨어져요"],
     ["조작", "좌우 이동 ←→ (A·D), 돌리기 ↑ (W), 천천히 내리기 ↓ (S), 바로 떨구기 스페이스"],
     ["한 키보드 2인", "1P: A·D·S·W + F(떨구기) / 2P: 방향키 + Enter(떨구기)"],
   ],

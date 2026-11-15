@@ -10,20 +10,41 @@ const GRAV = 0.16, START = 100, TURN = 25 * 60, ROUNDS = 3, SHOTS = 3, MAXPULL =
 const rnd = (n) => (Math.random() * n) | 0;
 const cellAt = (g, c, r) => g[r * NCc + c];
 const setCell = (s, c, r, ch) => { const i = r * NCc + c; s.g = s.g.slice(0, i) + ch + s.g.slice(i + 1); };
+// 한 판에 세 번: 보통떡 → 폭발떡 → 돌덩이떡 순서로 쏜다
+const KINDS = [
+  { name: "보통떡", tip: "", col: "#ffc93c" },
+  { name: "폭발떡", tip: "닿으면 터져요. 날아가는 중에 스페이스·터치로 미리 터뜨릴 수도 있어요", col: "#ff5d73" },
+  { name: "돌덩이떡", tip: "무거워서 돌도 한 번에 깨요", col: "#8f93b8" },
+];
+const kindOf = (p) => (((SHOTS - p.sh) % 3) + 3) % 3;
+const STYLES = ["들쭉날쭉 탑", "피라미드", "쌍둥이 탑", "긴 성벽"];
+const SKIES = [
+  { name: "낮", sky: ["#8fd3ff", "#fff1cf"], sun: "#fff3b0", hill: ["#bfe6a8", "#a6d992"], grass: ["#8ccf6a", "#6fb651"] },
+  { name: "노을", sky: ["#ff9f7a", "#ffe2a8"], sun: "#fff0c2", hill: ["#e6a56c", "#d68d58"], grass: ["#c9a24f", "#a8842f"] },
+  { name: "밤", sky: ["#20245e", "#5a4a9a"], sun: "#fff6c8", hill: ["#3d4a8a", "#33407a"], grass: ["#4f8f7f", "#3a7466"], night: true },
+];
 
-function makeLevel() {
+function makeLevel(style) {
   for (;;) {
-    const g = new Array(NCc * NR).fill("0"), hs = []; let h = 3 + rnd(3);
-    for (let c = 0; c < NCc; c++) { h = Math.max(2, Math.min(6, h + rnd(3) - 1)); hs.push(c > 0 && c < NCc - 1 && Math.random() < 0.14 ? 0 : h); }
-    for (let c = 0; c < NCc; c++) for (let r = 0; r < hs[c]; r++) g[r * NCc + c] = r === 0 ? (Math.random() < 0.5 ? "s" : "w") : Math.random() < 0.2 ? "g" : Math.random() < 0.18 ? "s" : "w";
+    const g = new Array(NCc * NR).fill("0"), hs = [];
+    let h = 3 + rnd(3);
+    for (let c = 0; c < NCc; c++) {
+      if (style === 1) hs.push(Math.max(1, 6 - Math.abs(c - 4.5) | 0) + rnd(2));                                  // 가운데가 높은 피라미드
+      else if (style === 2) hs.push(c < 3 || c > 6 ? 5 + rnd(3) : c === 4 || c === 5 ? 0 : 1 + rnd(2));             // 양쪽에 높은 탑
+      else if (style === 3) hs.push(4 + (c % 3 === 1 ? 1 : 0));                                                    // 높이가 고른 성벽
+      else { h = Math.max(2, Math.min(6, h + rnd(3) - 1)); hs.push(c > 0 && c < NCc - 1 && Math.random() < 0.14 ? 0 : h); }
+    }
+    const stone = style === 3 ? 0.3 : style === 2 ? 0.24 : 0.18, glass = style === 1 ? 0.3 : 0.2;
+    for (let c = 0; c < NCc; c++) for (let r = 0; r < hs[c]; r++) g[r * NCc + c] = r === 0 ? (Math.random() < 0.5 ? "s" : "w") : Math.random() < glass ? "g" : Math.random() < stone ? "s" : "w";
     const cols = [...Array(NCc).keys()].filter((c) => hs[c] > 0).sort(() => Math.random() - 0.5).slice(0, 5);
-    for (const c of cols) { if (Math.random() < 0.6) g[hs[c] * NCc + c] = "t"; else g[(1 + rnd(hs[c] - 1)) * NCc + c] = "t"; }
+    for (const c of cols) { if (hs[c] < NR - 1 && (hs[c] < 2 || Math.random() < 0.55)) g[hs[c] * NCc + c] = "t"; else g[(1 + rnd(hs[c] - 1)) * NCc + c] = "t"; }
     if (g.filter((x) => x === "t").length >= 4) return g.join("");
   }
 }
 
 function init(seats) {
-  return { tick: 0, seats, g: makeLevel(), p: seats.map(() => ({ sc: 0, sh: SHOTS, ka: 40, kp: 85, ax: 0, ay: 0, pp: 0, pa: 0 })), turn: 0, ph: 0, tl: TURN, tm: 0, rd: 1, shot: null, over: null, pop: [], fc: 0, hc: 0, tc: 0, tn: 0 };
+  const st = rnd(STYLES.length);
+  return { tick: 0, seats, st, th: rnd(SKIES.length), g: makeLevel(st), p: seats.map(() => ({ sc: 0, sh: SHOTS, ka: 40, kp: 85, ax: 0, ay: 0, pp: 0, pa: 0 })), turn: 0, ph: 0, tl: TURN, tm: 0, rd: 1, shot: null, over: null, pop: [], ex: [], fc: 0, hc: 0, tc: 0, tn: 0, xc: 0 };
 }
 
 function score(s, v, c, r) {
@@ -54,11 +75,26 @@ function collapse(s) {
 
 function launch(s, ax, ay) {
   const p = s.p[s.turn];
-  s.shot = { x: SX, y: SY, vx: ax * VK, vy: ay * VK, age: 0, o: s.turn };
+  s.shot = { x: SX, y: SY, vx: ax * VK, vy: ay * VK, age: 0, o: s.turn, k: kindOf(p), pa: 1 };
   p.sh--; s.ph = 1; s.fc++;
 }
 
 function endShot(s) { s.shot = null; s.ph = 2; s.tm = 45; }
+
+// 폭발떡: 둘레의 블록을 한꺼번에 날린다 (돌은 금만 간다)
+function burst(s, x, y) {
+  const rad = CS * 1.6;
+  for (let c = 0; c < NCc; c++) for (let r = 0; r < NR; r++) {
+    const ch = cellAt(s.g, c, r);
+    if (ch === "0" || Math.hypot(X0 + (c + 0.5) * CS - x, GY - (r + 0.5) * CS - y) > rad) continue;
+    if (ch === "s") { setCell(s, c, r, "d"); s.hc++; continue; }
+    setCell(s, c, r, "0");
+    if (ch === "t") { score(s, 100, c, r); s.tc++; } else { score(s, ch === "d" ? 20 : 10, c, r); s.hc++; }
+  }
+  collapse(s);
+  if (s.ex) { s.ex.push({ x: Math.round(x), y: Math.round(y), t: 0 }); s.xc++; }
+  endShot(s);
+}
 
 function flyTick(s) {
   const b = s.shot;
@@ -66,6 +102,7 @@ function flyTick(s) {
     b.vy += GRAV * 0.5; b.x += b.vx * 0.5; b.y += b.vy * 0.5;
     if (b.y > GY - BRD) {
       b.y = GY - BRD;
+      if (b.k === 1 && b.x > X0 - 70) { burst(s, b.x, b.y); return; }
       if (Math.abs(b.vy) > 1.2) { b.vy = -b.vy * 0.38; b.vx *= 0.8; } else { b.vy = 0; b.vx *= 0.92; }
     }
     const c0 = Math.floor((b.x - BRD - X0) / CS), c1 = Math.floor((b.x + BRD - X0) / CS);
@@ -78,12 +115,14 @@ function flyTick(s) {
       const nx = Math.max(x, Math.min(b.x, x + CS)), ny = Math.max(y, Math.min(b.y, y + CS));
       let dx = b.x - nx, dy = b.y - ny, d = Math.hypot(dx, dy);
       if (d >= BRD) continue;
-      const sp = Math.hypot(b.vx, b.vy);
+      if (b.k === 1) { burst(s, b.x, b.y); return; }
+      const sp = Math.hypot(b.vx, b.vy), heavy = b.k === 2;
       const smash = (pts, keep) => { setCell(s, c, r, "0"); score(s, pts, c, r); b.vx *= keep; b.vy *= keep; removed = true; };
       if (ch === "t") { smash(100, 0.85); s.tc++; continue; }
       if (ch === "g" && sp > 1.5) { smash(10, 0.85); s.hc++; continue; }
-      if (ch === "w" && sp >= 5) { smash(10, 0.55); s.hc++; continue; }
-      if (ch === "d" && sp >= 5) { smash(20, 0.4); s.hc++; continue; }
+      if (ch === "w" && sp >= (heavy ? 2.5 : 5)) { smash(10, heavy ? 0.8 : 0.55); s.hc++; continue; }
+      if (ch === "d" && sp >= (heavy ? 2.5 : 5)) { smash(20, heavy ? 0.65 : 0.4); s.hc++; continue; }
+      if (ch === "s" && heavy && sp >= 5.5) { smash(20, 0.5); s.hc++; continue; }      // 돌덩이떡은 돌도 한 번에
       if (ch === "s" && sp >= 8) { setCell(s, c, r, "d"); s.hc++; }      // 돌은 한 번에 안 깨지고 금이 간다
       if (d < 0.001) { dx = b.vx > 0 ? -1 : 1; dy = 0; d = 1; }
       const ux = dx / d, uy = dy / d, vn = b.vx * ux + b.vy * uy;
@@ -104,7 +143,7 @@ function advance(s) {
       s.p.forEach((p, i) => { if (p.sc > s.p[w].sc) { w = i; tie = false; } else if (i !== w && p.sc === s.p[w].sc) tie = true; });
       s.over = { w: tie ? -1 : w, t: 0 }; return;
     }
-    s.rd++; s.g = makeLevel(); s.turn = (s.rd - 1) % n;
+    s.rd++; s.st = rnd(STYLES.length); s.g = makeLevel(s.st); s.turn = (s.rd - 1) % n;
     for (const p of s.p) p.sh = SHOTS;
     s.ph = 3; s.tm = 90; return;
   }
@@ -115,6 +154,8 @@ function advance(s) {
 function step(s, masks, aims) {
   s.tick++;
   for (const q of s.pop) q.t++;
+  for (const e of s.ex) e.t++;
+  if (s.ex.length && s.ex[0].t > 30) s.ex = s.ex.filter((e) => e.t <= 30);
   if (s.over) { s.over.t++; return; }
   if (s.tick < START) return;
   if (s.ph === 0) {
@@ -135,7 +176,12 @@ function step(s, masks, aims) {
     p.pa = m & A ? 1 : 0;
     if (go) launch(s, p.ax, p.ay);
     else if (--s.tl <= 0) { p.sh--; s.ph = 2; s.tm = 20; }
-  } else if (s.ph === 1) flyTick(s);
+  } else if (s.ph === 1) {
+    // 폭발떡은 날아가는 중에 버튼을 새로 누르면 그 자리에서 터진다
+    const b = s.shot, dn = (masks[b.o] | 0) & (A | P) ? 1 : 0;
+    if (b.k === 1 && dn && !b.pa && b.age > 6) burst(s, b.x, b.y);
+    else { b.pa = dn; flyTick(s); }
+  }
   else if (s.ph === 2) { if (--s.tm <= 0) advance(s); }
   else if (--s.tm <= 0) { s.ph = 0; s.tl = TURN; s.tn++; }
 }
@@ -143,8 +189,8 @@ function step(s, masks, aims) {
 // ── 봇: 여러 번 쏴 보고 점수가 잘 나오는 조준을 고른다 ──
 const TRIES = { easy: 10, normal: 36, hard: 90 };
 
-function tryShot(s, ax, ay) {
-  const c = { g: s.g, p: [{ sc: 0, sh: 9 }], turn: 0, shot: null, pop: [], ph: 1, tm: 0, fc: 0, hc: 0, tc: 0 };
+function tryShot(s, ax, ay, sh) {
+  const c = { g: s.g, p: [{ sc: 0, sh }], turn: 0, shot: null, pop: [], ph: 1, tm: 0, fc: 0, hc: 0, tc: 0 };
   launch(c, ax, ay);
   for (let k = 0; k < 450 && c.shot; k++) flyTick(c);
   return c.p[0].sc;
@@ -157,7 +203,7 @@ function bot(s, i, mem, level) {
     let best = null;
     for (let k = 0; k < (TRIES[level] || TRIES.normal); k++) {
       const a = ((12 + Math.random() * 62) * Math.PI) / 180, pw = 50 + Math.random() * 60;
-      const ax = Math.round(Math.cos(a) * pw), ay = Math.round(-Math.sin(a) * pw), sc = tryShot(s, ax, ay) + Math.random() * 5;
+      const ax = Math.round(Math.cos(a) * pw), ay = Math.round(-Math.sin(a) * pw), sc = tryShot(s, ax, ay, s.p[i].sh) + Math.random() * 5;
       if (!best || sc > best.sc) best = { sc, ax, ay };
     }
     mem.plan = best;
@@ -194,14 +240,17 @@ function drawCell(ctx, ch, x, y, t) {
 }
 
 function draw(ctx, v, env) {
+  const sk = SKIES[v.th | 0] || SKIES[0];
   const g = ctx.createLinearGradient(0, 0, 0, GY);
-  g.addColorStop(0, "#8fd3ff"); g.addColorStop(1, "#fff1cf");
+  g.addColorStop(0, sk.sky[0]); g.addColorStop(1, sk.sky[1]);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = "#fff3b0"; ctx.beginPath(); ctx.arc(110, 84, 40, 0, 7); ctx.fill();
-  ctx.fillStyle = "#bfe6a8"; ctx.beginPath(); ctx.ellipse(300, GY + 30, 380, 110, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = "#a6d992"; ctx.beginPath(); ctx.ellipse(800, GY + 40, 360, 130, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = "#8ccf6a"; ctx.fillRect(0, GY, W, H - GY);
-  ctx.fillStyle = "#6fb651"; ctx.fillRect(0, GY, W, 7);
+  if (sk.night) { ctx.fillStyle = "rgba(255,255,255,.85)"; for (let i = 0; i < 40; i++) { ctx.beginPath(); ctx.arc((i * 211) % W, (i * 83) % 260, 1 + ((i * 7) % 3) * 0.5, 0, 7); ctx.fill(); } }
+  ctx.fillStyle = sk.sun; ctx.beginPath(); ctx.arc(110, 84, sk.night ? 32 : 40, 0, 7); ctx.fill();
+  if (sk.night) { ctx.fillStyle = sk.sky[0]; ctx.beginPath(); ctx.arc(97, 76, 28, 0, 7); ctx.fill(); }
+  ctx.fillStyle = sk.hill[0]; ctx.beginPath(); ctx.ellipse(300, GY + 30, 380, 110, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = sk.hill[1]; ctx.beginPath(); ctx.ellipse(800, GY + 40, 360, 130, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = sk.grass[0]; ctx.fillRect(0, GY, W, H - GY);
+  ctx.fillStyle = sk.grass[1]; ctx.fillRect(0, GY, W, 7);
   // 성
   for (let r = 0; r < NR; r++) for (let c = 0; c < NCc; c++) { const ch = cellAt(v.g, c, r); if (ch !== "0") drawCell(ctx, ch, X0 + c * CS, GY - (r + 1) * CS, env.t); }
 
@@ -226,10 +275,26 @@ function draw(ctx, v, env) {
   // 날아가는(또는 새총에 걸린) 선수
   if (!v.over) {
     const look = parseLook(v.seats[v.turn].look, v.turn);
+    // 떡 종류 표시: 폭발떡은 붉은 불꽃 테, 돌덩이떡은 돌 테
+    const halo = (x, y, k) => {
+      if (k === 1) { ctx.strokeStyle = "#ff5d73"; ctx.lineWidth = 4; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.arc(x, y, BRD + 6 + Math.sin(env.t * 12) * 1.5, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
+      else if (k === 2) { ctx.strokeStyle = "#6b7196"; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(x, y, BRD + 5, 0, 7); ctx.stroke(); ctx.strokeStyle = "#a3a8c8"; ctx.lineWidth = 2; ctx.stroke(); }
+    };
     if (v.shot) {
       const q = env.prev && env.prev.shot, x = q ? q.x + (v.shot.x - q.x) * env.alpha : v.shot.x, y = q ? q.y + (v.shot.y - q.y) * env.alpha : v.shot.y;
+      halo(x, y, v.shot.k);
       drawMochi(ctx, x, y, BRD, look, { ang: Math.atan2(v.shot.vy, v.shot.vx), open: true });
-    } else if (v.ph === 0) drawMochi(ctx, px, py, BRD, look, { ang: Math.atan2(p.ay, p.ax), sq: aiming ? -0.08 : 0 });
+    } else if (v.ph === 0) { halo(px, py, kindOf(p)); drawMochi(ctx, px, py, BRD, look, { ang: Math.atan2(p.ay, p.ax), sq: aiming ? -0.08 : 0 }); }
+  }
+  // 폭발
+  for (const e of v.ex || []) {
+    if (e.t > 26) continue;
+    const r = e.t < 8 ? (CS * 1.6 * e.t) / 8 : CS * 1.6;
+    ctx.globalAlpha = e.t < 8 ? 1 : Math.max(0, 1 - (e.t - 8) / 18);
+    ctx.fillStyle = "#ff7a2f"; ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, 7); ctx.fill();
+    ctx.fillStyle = "#ffd24a"; ctx.beginPath(); ctx.arc(e.x, e.y, r * 0.62, 0, 7); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(e.x, e.y, r * 0.28, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
   }
   // 점수 팝업
   for (const q of v.pop) if (q.t < 60) label(ctx, "+" + q.v, q.x, q.y - q.t * 0.7, q.v >= 100 ? 24 : 16, q.v >= 100 ? "#ff5d73" : "#2b2d6e", "#fff");
@@ -241,15 +306,18 @@ function draw(ctx, v, env) {
     rr(ctx, x + 5, 8, cw - 10, 50, 13); ctx.fill(); ctx.stroke();
     label(ctx, seat.name, x + 14, 29, 15, i === env.me ? "#d6336c" : "#2b2d6e", null, "left");
     label(ctx, String(q.sc), x + cw - 14, 34, 22, "#2b2d6e", null, "right");
-    for (let k = 0; k < SHOTS; k++) { ctx.fillStyle = k < q.sh ? "#ffc93c" : "rgba(43,45,110,.18)"; ctx.beginPath(); ctx.arc(x + 20 + k * 14, 45, 4.5, 0, 7); ctx.fill(); }
+    for (let k = 0; k < SHOTS; k++) { ctx.fillStyle = k >= SHOTS - q.sh ? KINDS[k % 3].col : "rgba(43,45,110,.18)"; ctx.beginPath(); ctx.arc(x + 20 + k * 14, 45, 4.5, 0, 7); ctx.fill(); }
   });
-  label(ctx, `${v.rd}번째 판 / ${ROUNDS}판`, W / 2, 82, 17, "#2b2d6e", "rgba(255,255,255,.9)");
+  label(ctx, `${v.rd}번째 판 / ${ROUNDS}판 · ${STYLES[v.st | 0]} · ${sk.name}`, W / 2, 82, 17, "#2b2d6e", "rgba(255,255,255,.9)");
   if (v.tick < START) label(ctx, "준비!", W / 2, H / 2 - 30, 80, "#ff5d73", "#fff");
   else if (v.ph === 3) label(ctx, `${v.rd}번째 판!`, W / 2, H / 2 - 30, 70, "#ff5d73", "#fff");
   else if (aiming) {
     label(ctx, `${v.seats[v.turn].name} 차례 · ${Math.ceil(v.tl / 60)}초`, SX + 40, SY - 120, 18, v.turn === env.me ? "#d6336c" : "#2a2440", "rgba(255,255,255,.9)");
-    if (v.turn === env.me) label(ctx, "화면을 뒤로 끌었다 놓으면 발사 · 키보드: ↑↓ 각도, ←→ 힘, 스페이스", W / 2, H - 16, 17, "#2a2440", "rgba(255,255,255,.9)");
+    const kd = KINDS[kindOf(p)];
+    label(ctx, "이번 떡: " + kd.name, SX + 40, SY - 96, 17, kd.col === "#ffc93c" ? "#b07d0a" : kd.col, "rgba(255,255,255,.9)");
+    if (v.turn === env.me) label(ctx, kd.tip || "화면을 뒤로 끌었다 놓으면 발사 · 키보드: ↑↓ 각도, ←→ 힘, 스페이스", W / 2, H - 16, 17, "#2a2440", "rgba(255,255,255,.9)");
   }
+  if (v.ph === 1 && v.shot && v.shot.k === 1 && v.shot.o === env.me) label(ctx, "스페이스·터치로 지금 터뜨리기!", W / 2, H - 16, 18, "#ff5d73", "#fff");
   if (v.over) {
     const w = v.over.w;
     label(ctx, w < 0 ? "무승부!" : w === env.me ? "이겼다!" : `${v.seats[w].name} 승리!`, W / 2, H / 2 - 30, 70, "#ffc93c", "#2b2d6e");
@@ -257,7 +325,8 @@ function draw(ctx, v, env) {
 }
 
 function fx(v, m, snd, me) {
-  if (m.fc == null) Object.assign(m, { fc: v.fc, hc: v.hc, tc: v.tc, tn: -1, ov: !!v.over });
+  if (m.fc == null) Object.assign(m, { fc: v.fc, hc: v.hc, tc: v.tc, xc: v.xc | 0, tn: -1, ov: !!v.over });
+  if ((v.xc | 0) !== m.xc) { m.xc = v.xc | 0; snd(80, 0.4, "sawtooth", 0.15, -30); }
   if (v.fc !== m.fc) { m.fc = v.fc; snd(300, 0.25, "sine", 0.12, 500); }
   if (v.hc !== m.hc) { m.hc = v.hc; snd(180, 0.1, "square", 0.08, -90); }
   if (v.tc !== m.tc) { m.tc = v.tc; snd(700, 0.14, "triangle", 0.12, 500); }
@@ -288,6 +357,8 @@ export const meta = {
   howto: [
     ["목표", "새총으로 몸을 날려 성을 부수고 보라색 도깨비를 잡아요. 도깨비 100점, 블록 10~20점. 세 판 합계가 가장 높으면 승리"],
     ["조작", "화면을 뒤쪽(왼쪽 아래)으로 끌었다가 놓으면 발사. 키보드는 ↑↓ 각도, ←→ 힘, 스페이스 발사"],
+    ["떡 종류", "한 판에 세 번, 보통떡 → 폭발떡 → 돌덩이떡 순서로 쏴요. 폭발떡은 닿으면 둘레를 날리고(날아가는 중에 스페이스·터치로 미리 터뜨리기 가능), 돌덩이떡은 돌도 한 번에 깨요"],
+    ["성", "판마다 들쭉날쭉 탑·피라미드·쌍둥이 탑·긴 성벽 가운데 하나가 나와요"],
     ["요령", "나무는 세게 맞혀야 부서지고, 돌은 두 번 맞혀야 깨져요. 밑을 빼면 위가 무너지면서 도깨비가 깔려요"],
     ["한 키보드 2인", "차례가 되면 같은 마우스(또는 키보드)로 번갈아 쏴요"],
   ],

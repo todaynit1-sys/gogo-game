@@ -1,7 +1,7 @@
 // 떡 축구 — 위에서 내려다보는 미니 축구. 몸으로 밀고, 차기 버튼으로 뻥 찬다.
 // 2분 동안 골을 더 많이 넣은 팀이 승리(5골을 먼저 넣어도 끝).
 
-import { startHostGame, L, R, U, D, A } from "./hostgame.js?v=1";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=1";
 import { drawMochi, parseLook } from "../avatar.js?v=2";
 import { rr, label, jingle } from "./kit.js?v=1";
 
@@ -9,19 +9,25 @@ const W = 960, H = 540, FX0 = 48, FX1 = 912, FY0 = 58, FY1 = 502, GY0 = 205, GY1
 const PR = 20, BR = 12, TIME = 120 * 60, WIN_GOALS = 5, OVERTIME = 45 * 60;
 const TEAM = ["#ff5d73", "#4d9be0"], TEAM_NAME = ["빨강 팀", "파랑 팀"];
 const KICK_POS = [[-150, 0], [-320, -100]];
+const FIELDS = [
+  { name: "잔디 구장", out: "#2f8f4e", a: "#58b56a", b: "#4fab62", line: "rgba(255,255,255,.9)" },
+  { name: "눈밭 구장", out: "#9fc4dd", a: "#f4fbff", b: "#e3f1fa", line: "rgba(77,155,224,.85)" },
+  { name: "모래 구장", out: "#c9964f", a: "#f1d69a", b: "#e9c986", line: "rgba(255,255,255,.95)" },
+  { name: "밤 구장", out: "#17203f", a: "#2c6a55", b: "#28604d", line: "rgba(255,255,255,.75)" },
+];
 
 function kickoff(s) {
   const cnt = [0, 0];
   s.p.forEach((p) => {
     const [dx, dy] = KICK_POS[cnt[p.team]++ % 2], sign = p.team === 0 ? 1 : -1;
-    p.x = CX + dx * sign; p.y = CY + dy * sign; p.vx = 0; p.vy = 0; p.kc = 0;
+    p.x = CX + dx * sign; p.y = CY + dy * sign; p.vx = 0; p.vy = 0; p.kc = 0; p.ds = 0;
   });
   Object.assign(s.b, { x: CX, y: CY, vx: 0, vy: 0 });
   s.ph = 0; s.tm = 80;
 }
 
 function init(seats) {
-  const s = { tick: 0, seats, p: seats.map((_, i) => ({ x: 0, y: 0, vx: 0, vy: 0, kc: 0, pa: 0, team: i % 2 })), b: { x: CX, y: CY, vx: 0, vy: 0 }, sc: [0, 0], time: TIME, ot: 0, ph: 0, tm: 80, over: null, gk: 0, kk: 0, wk: 0, lg: 0 };
+  const s = { tick: 0, seats, p: seats.map((_, i) => ({ x: 0, y: 0, vx: 0, vy: 0, kc: 0, pa: 0, ds: 0, dc: 0, pb: 0, dx: 0, dy: 0, team: i % 2 })), b: { x: CX, y: CY, vx: 0, vy: 0 }, sc: [0, 0], time: TIME, ot: 0, ph: 0, tm: 80, over: null, gk: 0, kk: 0, wk: 0, lg: 0, dk: 0, th: (Math.random() * FIELDS.length) | 0 };
   kickoff(s);
   return s;
 }
@@ -49,7 +55,12 @@ function step(s, masks) {
     const i = flip ? n - 1 - k : k, p = s.p[i], m = masks[i] | 0;
     let ax = (m & R ? 1 : 0) - (m & L ? 1 : 0), ay = (m & D ? 1 : 0) - (m & U ? 1 : 0);
     if (ax && ay) { ax *= 0.707; ay *= 0.707; }
-    p.vx = p.vx * 0.86 + ax * 0.56; p.vy = p.vy * 0.86 + ay * 0.56;
+    // 대시: 누른 방향으로 짧게 돌진 (쉬는 시간 있음)
+    if (p.dc > 0) p.dc--;
+    if (m & B && !p.pb && p.dc <= 0 && (ax || ay)) { p.ds = 9; p.dc = 110; p.dx = ax; p.dy = ay; s.dk++; }
+    p.pb = m & B ? 1 : 0;
+    if (p.ds > 0) { p.ds--; p.vx = p.dx * 9; p.vy = p.dy * 9; }
+    else { p.vx = p.vx * 0.86 + ax * 0.56; p.vy = p.vy * 0.86 + ay * 0.56; }
     p.x += p.vx; p.y += p.vy;
     p.x = Math.max(FX0 + PR - 14, Math.min(FX1 - PR + 14, p.x)); p.y = Math.max(FY0 + PR - 10, Math.min(FY1 - PR + 10, p.y));
     if (p.kc > 0) p.kc--;
@@ -74,7 +85,8 @@ function step(s, masks) {
     const nx = dx / d, ny = dy / d;
     b.x = p.x + nx * (PR + BR); b.y = p.y + ny * (PR + BR);
     const vn = (b.vx - p.vx) * nx + (b.vy - p.vy) * ny;
-    if (vn < 0) { b.vx -= 1.5 * vn * nx; b.vy -= 1.5 * vn * ny; }
+    const pw = p.ds > 0 ? 1.9 : 1.5;      // 대시로 들이받으면 더 세게 튄다
+    if (vn < 0) { b.vx -= pw * vn * nx; b.vy -= pw * vn * ny; }
   }
   const sp = Math.hypot(b.vx, b.vy);
   if (sp > 13) { b.vx *= 13 / sp; b.vy *= 13 / sp; }
@@ -128,15 +140,18 @@ function bot(s, i, mem, level) {
     const kx = b.x - p.x, ky = b.y - p.y, kd = Math.hypot(kx, ky) || 1;
     if (kd < PR + BR + 9 && (kx / kd) * mem.ux + (ky / kd) * mem.uy > cfg.aim && p.kc <= 0 && !(mem.last & A)) m |= A;
   }
+  // 공이 멀면 대시로 따라붙는다
+  if (mem.chase && p.dc <= 0 && Math.hypot(dx, dy) > 170 && !(mem.last & B) && cfg.skip < 0.3 && m & (L | R | U | D)) m |= B;
   mem.last = m;
   return m;
 }
 
 // ── 그리기 ──
 function draw(ctx, v, env) {
-  ctx.fillStyle = "#2f8f4e"; ctx.fillRect(0, 0, W, H);
-  for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? "#58b56a" : "#4fab62"; ctx.fillRect(FX0 + (i * (FX1 - FX0)) / 8, FY0, (FX1 - FX0) / 8, FY1 - FY0); }
-  ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 4;
+  const fd = FIELDS[v.th | 0] || FIELDS[0];
+  ctx.fillStyle = fd.out; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? fd.a : fd.b; ctx.fillRect(FX0 + (i * (FX1 - FX0)) / 8, FY0, (FX1 - FX0) / 8, FY1 - FY0); }
+  ctx.strokeStyle = fd.line; ctx.lineWidth = 4;
   ctx.strokeRect(FX0, FY0, FX1 - FX0, FY1 - FY0);
   ctx.beginPath(); ctx.moveTo(CX, FY0); ctx.lineTo(CX, FY1); ctx.stroke();
   ctx.beginPath(); ctx.arc(CX, CY, 70, 0, 7); ctx.stroke();
@@ -154,7 +169,13 @@ function draw(ctx, v, env) {
   v.p.forEach((p, i) => {
     const q = env.prev && env.prev.p[i], x = q ? lerp(p.x, q.x) : p.x, y = q ? lerp(p.y, q.y) : p.y;
     ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.beginPath(); ctx.ellipse(x, y + 16, 19, 7, 0, 0, 7); ctx.fill();
+    if (p.ds > 0) {       // 대시 잔상
+      ctx.globalAlpha = 0.25;
+      for (let k = 1; k <= 3; k++) { ctx.fillStyle = TEAM[p.team]; ctx.beginPath(); ctx.arc(x - p.dx * k * 13, y - p.dy * k * 13, PR - k * 2, 0, 7); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    }
     ctx.strokeStyle = TEAM[p.team]; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(x, y, PR + 3 + (p.kc > 8 ? 4 : 0), 0, 7); ctx.stroke();
+    if (p.dc <= 0) { ctx.fillStyle = "#ffe066"; ctx.beginPath(); ctx.arc(x + PR + 2, y + PR - 2, 4.5, 0, 7); ctx.fill(); }      // 대시 준비됨
     drawMochi(ctx, x, y, PR, parseLook(v.seats[i].look, i), { ang: Math.atan2(v.b.y - p.y, v.b.x - p.x) });
     if (i === env.me) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(x - 7, y - 40); ctx.lineTo(x + 7, y - 40); ctx.lineTo(x, y - 31); ctx.fill(); }
     else label(ctx, v.seats[i].name, x, y - 31, 12, "#fff", "rgba(43,45,110,.8)");
@@ -175,7 +196,17 @@ function draw(ctx, v, env) {
   label(ctx, v.time > 0 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}` : "골든골!", CX, 38, 22, v.time > 0 && sec > 10 ? "#2b2d6e" : "#ff5d73", null);
   if (env.me >= 0 && v.tick < 420) label(ctx, `나는 ${TEAM_NAME[env.me % 2]} · ${env.me % 2 ? "왼쪽" : "오른쪽"} 골대로!`, CX, H - 12, 18, "#fff", "rgba(43,45,110,.85)");
   if (v.ph === 0 && !v.over) label(ctx, "준비!", CX, CY + 20, 70, "#fff", "#2b2d6e");
-  if (v.ph === 2 && !v.over) label(ctx, "골!", CX, CY + 20, 110, TEAM[v.lg], "#fff");
+  if (v.ph === 2 && !v.over) {
+    // 골 축포
+    const k = 120 - v.tm, cols = ["#ff5d73", "#ffc93c", "#7ddc7a", "#6ec6ff", "#b79cff"];
+    for (let i = 0; i < 46; i++) {
+      const x = (i * 131) % W, y = ((i * 53) % 200) - 120 + k * (3 + (i % 4)), s2 = 5 + (i % 3) * 2;
+      ctx.save(); ctx.translate(x + Math.sin(k * 0.1 + i) * 14, y); ctx.rotate(k * 0.12 + i);
+      ctx.fillStyle = cols[i % 5]; ctx.fillRect(-s2, -s2 / 2, s2 * 2, s2); ctx.restore();
+    }
+    label(ctx, "골!", CX, CY + 20, 110, TEAM[v.lg], "#fff");
+  }
+  label(ctx, fd.name, W - 14, H - 12, 14, "#fff", "rgba(43,45,110,.7)", "right");
   if (v.over) {
     const w = v.over.w, mine = env.me >= 0 ? env.me % 2 : -1;
     label(ctx, w < 0 ? "무승부!" : mine < 0 ? `${TEAM_NAME[w]} 승리!` : w === mine ? "이겼다!" : "아쉽다, 졌어요", CX, CY + 10, 70, "#ffc93c", "#2b2d6e");
@@ -183,7 +214,8 @@ function draw(ctx, v, env) {
 }
 
 function fx(v, m, snd) {
-  if (m.gk == null) Object.assign(m, { gk: v.gk, kk: v.kk, wk: v.wk, ov: !!v.over });
+  if (m.gk == null) Object.assign(m, { gk: v.gk, kk: v.kk, wk: v.wk, dk: v.dk, ov: !!v.over });
+  if (v.dk !== m.dk) { m.dk = v.dk; snd(700, 0.14, "sawtooth", 0.05, -500); }
   if (v.kk !== m.kk) { m.kk = v.kk; snd(210, 0.09, "square", 0.1, -90); }
   if (v.wk !== m.wk) { m.wk = v.wk; snd(330, 0.05, "sine", 0.06); }
   if (v.gk !== m.gk) { m.gk = v.gk; jingle(snd, [523, 659, 784, 1047, 1319], 90); }
@@ -198,7 +230,7 @@ function title(v, me) {
 }
 
 const G = {
-  W, H, sendEvery: 2, action: "차기", overDelay: 220, multiDir: true,
+  W, H, sendEvery: 2, action: "차기", action2: "대시", overDelay: 220, multiDir: true,
   bots: { solo: 3, local: 2 },
   cap: (mode, n) => mode || (n >= 3 ? 4 : 2),
   fill: (mode, n) => Math.max(0, (mode || (n >= 3 ? 4 : 2)) - n),
@@ -218,8 +250,9 @@ export const meta = {
   howto: [
     ["목표", "공을 상대 골대에 넣어요. 2분 동안 더 많이 넣은 팀이 승리, 5골을 먼저 넣어도 끝"],
     ["조작", "이동 방향키(또는 W·A·S·D, 대각선 가능), 공 가까이에서 스페이스로 뻥 차기"],
+    ["대시", "방향을 누른 채 Q(2P는 마침표)를 누르면 짧게 돌진해요. 노란 점이 보이면 쓸 수 있고, 대시로 공을 들이받으면 세게 날아가요"],
     ["요령", "몸으로 밀면 드리블, 공 뒤에서 골대 쪽으로 차면 슛이에요"],
-    ["한 키보드 2인", "1P: W·A·S·D + F / 2P: 방향키 + Enter"],
+    ["한 키보드 2인", "1P: W·A·S·D + F, 대시 Q / 2P: 방향키 + Enter, 대시 마침표(.)"],
   ],
 };
 export const start = (opts) => startHostGame(G, opts);
