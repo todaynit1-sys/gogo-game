@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=1">
+<link rel="stylesheet" href="/css/app.css?v=2">
 </head>
 <body>
 <header class="top">
@@ -27,23 +27,32 @@
 <main>
   <!-- 첫 화면: 게임 고르기 -->
   <section class="view" id="v-home">
-    <div class="hero">
-      <h1>가입 없이,<br>친구랑 바로 한 판.</h1>
-      <p>게임을 고르고 링크만 보내면 끝. 2명부터 4명까지 같이 놀 수 있어요.</p>
-      <div class="namebox">
-        <label for="nick">닉네임</label>
-        <input id="nick" maxlength="10" autocomplete="off" placeholder="비워 두면 자동으로 지어 드려요">
-      </div>
-      <form class="joinbox" id="joinForm">
-        <label for="joinCode">초대받은 방 코드</label>
-        <div class="row">
-          <input id="joinCode" maxlength="4" autocomplete="off" placeholder="ABCD" inputmode="latin">
-          <button class="btn btn-navy" type="submit">들어가기</button>
+    <div class="myroom">
+      <div class="stagebox">
+        <canvas id="avatarCv" width="720" height="560" aria-label="내 캐릭터 미리보기"></canvas>
+        <div class="namerow">
+          <label for="nick">닉네임</label>
+          <input id="nick" maxlength="10" autocomplete="off" placeholder="비워 두면 자동으로 지어 드려요">
         </div>
-      </form>
+      </div>
+      <div class="closet">
+        <h1>내 방</h1>
+        <p class="lead">캐릭터를 꾸미고 아래에서 게임을 골라 들어가세요. 혼자 놀아도, 친구를 불러도 좋아요.</p>
+        <div class="pick"><span class="optlabel">색</span><div class="swatches" id="pickColor"></div></div>
+        <div class="pick"><span class="optlabel">표정</span><div class="chips" id="pickFace"></div></div>
+        <div class="pick"><span class="optlabel">꾸미기</span><div class="chips" id="pickHat"></div></div>
+        <button class="btn btn-line" id="randLook" type="button">아무거나 골라줘</button>
+      </div>
     </div>
     <h2 class="sec">게임 고르기</h2>
     <div class="cards" id="cards"></div>
+    <form class="joinbox" id="joinForm">
+      <label for="joinCode">친구에게 방 코드를 받았다면</label>
+      <div class="row">
+        <input id="joinCode" maxlength="4" autocomplete="off" placeholder="ABCD" inputmode="latin">
+        <button class="btn btn-navy" type="submit">들어가기</button>
+      </div>
+    </form>
   </section>
 
   <!-- 게임 소개 + 어떻게 놀지 고르기 -->
@@ -153,6 +162,6 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script type="module" src="/js/app.js?v=4"></script>
+<script type="module" src="/js/app.js?v=5"></script>
 </body>
 </html>

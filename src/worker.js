@@ -24,6 +24,10 @@ function cleanName(raw) {
   return s || "손님" + Math.floor(10 + Math.random() * 90);
 }
 
+function cleanLook(raw) {
+  return /^\d{1,2}\.\d{1,2}\.\d{1,2}$/.test(String(raw || "")) ? String(raw) : "";
+}
+
 function lobbyStub(env) {
   return env.LOBBY.get(env.LOBBY.idFromName("lobby"));
 }
@@ -92,7 +96,7 @@ export class Room extends DurableObject {
     let slot = 0;
     while (used.has(slot)) slot++;
     const id = ++this.meta.seq;
-    const me = { id, slot, name: cleanName(url.searchParams.get("name")) };
+    const me = { id, slot, name: cleanName(url.searchParams.get("name")), look: cleanLook(url.searchParams.get("look")) };
     if (current.length === 0) this.meta.host = id;
 
     this.ctx.acceptWebSocket(server);

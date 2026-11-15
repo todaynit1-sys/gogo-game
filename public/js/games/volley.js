@@ -2,6 +2,8 @@
 // 게임 계산은 "방장" 한 명의 브라우저가 맡고, 나머지는 결과를 받아 그린다.
 // 혼자 하기·한 키보드 2인은 서버 없이 돌아간다.
 
+import { drawMochi as paintMochi, parseLook } from "../avatar.js?v=1";
+
 const W = 960, H = 540, GROUND = 470, NET_X = 480, NET_HW = 7, NET_TOP = GROUND - 165;
 const PR = 40, BR = 24, DT = 1 / 60;
 const MOVE = 400, JUMP = 930, PG = 2300, BG = 1250;
@@ -332,35 +334,24 @@ export function startVolley(opts) {
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   }
 
+  function slotLook(i) {
+    if (kind !== "online") return i === 0 && opts.look ? opts.look : parseLook("", i);
+    const pl = room.players.find((p) => p.slot === i);
+    return parseLook(pl && pl.look, i);
+  }
+
   function drawMochi(p, i, s, isMe) {
-    const c = COLORS[i], b = s.b;
+    const b = s.b;
     const air = p.y < GROUND - PR - 2;
     const sq = air ? Math.max(-0.16, Math.min(0.16, -p.vy / 5200)) : Math.sin(s.tick * 0.12 + i) * 0.025;
-    const rx = PR * (1 - sq * 0.8), ry = PR * (1 + sq);
     // 그림자
     ctx.fillStyle = "rgba(80,50,20,.18)";
     ctx.beginPath(); ctx.ellipse(p.x, GROUND + 4, PR * (0.95 - (GROUND - PR - p.y) / 700), 7, 0, 0, 7); ctx.fill();
-    // 몸
-    ctx.fillStyle = c.body; ctx.strokeStyle = c.dark; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.ellipse(p.x, p.y + (PR - ry), rx, ry, 0, 0, 7); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,.5)";
-    ctx.beginPath(); ctx.ellipse(p.x - rx * 0.38, p.y - ry * 0.45 + (PR - ry), rx * 0.24, ry * 0.14, -0.5, 0, 7); ctx.fill();
-    // 얼굴 (공을 바라본다)
-    const ang = Math.atan2(b.y - p.y, b.x - p.x), ex = Math.cos(ang) * 4, ey = Math.sin(ang) * 4;
-    const fy = p.y - 4 + (PR - ry);
-    for (const sx of [-13, 13]) {
-      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(p.x + sx, fy, 8, 0, 7); ctx.fill();
-      ctx.fillStyle = "#3a2a22"; ctx.beginPath(); ctx.arc(p.x + sx + ex, fy + ey, 4.2, 0, 7); ctx.fill();
-    }
-    ctx.fillStyle = "rgba(255,90,110,.35)";
-    ctx.beginPath(); ctx.arc(p.x - 24, fy + 11, 6, 0, 7); ctx.arc(p.x + 24, fy + 11, 6, 0, 7); ctx.fill();
-    ctx.strokeStyle = "#3a2a22"; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.beginPath();
-    if (p.sm > 0) { ctx.fillStyle = "#3a2a22"; ctx.arc(p.x, fy + 15, 5, 0, 7); ctx.fill(); }
-    else { ctx.arc(p.x, fy + 10, 7, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); }
+    paintMochi(ctx, p.x, p.y, PR, slotLook(i), { ang: Math.atan2(b.y - p.y, b.x - p.x), sq, open: p.sm > 0 });
     // 이름표
     const name = slotName(i);
     ctx.font = "700 17px Jua, 'Malgun Gothic', sans-serif"; ctx.textAlign = "center";
-    const ny = Math.min(p.y - PR - 14, GROUND - PR * 2 - 14);
+    const ny = Math.min(p.y - PR - 34, GROUND - PR * 2 - 34);
     ctx.lineWidth = 5; ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.strokeText(name, p.x, ny);
     ctx.fillStyle = isMe ? "#d6336c" : "#4a3b33"; ctx.fillText(name, p.x, ny);
     if (isMe) { ctx.fillStyle = "#d6336c"; ctx.beginPath(); ctx.moveTo(p.x - 7, ny - 24); ctx.lineTo(p.x + 7, ny - 24); ctx.lineTo(p.x, ny - 15); ctx.fill(); }

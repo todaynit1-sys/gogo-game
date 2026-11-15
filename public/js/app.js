@@ -1,6 +1,7 @@
 // 한판 오락실 — 로비, 방 대기실, 게임 실행
 import { SITE, GAMES } from "./config.js";
-import { startVolley } from "./games/volley.js?v=2";
+import { startVolley } from "./games/volley.js?v=3";
+import { BODY, FACES, HATS, drawMochi, parseLook, lookStr, randomLook } from "./avatar.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -9,6 +10,7 @@ const store = {
 };
 
 let muted = store.get("hp_muted") === "1";
+let look = store.get("hp_look") ? parseLook(store.get("hp_look")) : randomLook();
 let current = GAMES[0];   // 고른 게임
 let ws = null, room = null, game = null, pingTimer = null, leaving = false;
 let offline = null;       // 혼자/로컬 다시 하기용 설정
@@ -69,7 +71,7 @@ function playOffline(cfg) {
   show("play");
   game = startVolley({
     canvas: $("cv"), touchEl: $("touch"), kind: cfg.kind, mode: 2, level: cfg.level,
-    myName: myName() || "나", isMuted: () => muted,
+    myName: myName() || "나", look, isMuted: () => muted,
     onOver: () => { $("resTitle").textContent = "한 판 더 할까요?"; $("result").hidden = false; },
   });
 }
@@ -93,7 +95,7 @@ async function api(path) {
 function connect(code, { pub = false } = {}) {
   disconnect();
   leaving = false;
-  const q = new URLSearchParams({ name: myName(), game: current.id, pub: pub ? "1" : "0" });
+  const q = new URLSearchParams({ name: myName(), look: lookStr(look), game: current.id, pub: pub ? "1" : "0" });
   const wsBase = BASE ? BASE.replace(/^http/, "ws") : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
   const sock = new WebSocket(`${wsBase}/ws/${code}?${q}`);
   ws = sock;
@@ -157,7 +159,8 @@ function renderRoom() {
     const el = document.createElement("div");
     el.className = "seat" + (p ? "" : " empty");
     if (p) {
-      const dot = document.createElement("span"); dot.className = "dot"; dot.style.background = SEAT_COLORS[i];
+      const dot = document.createElement("canvas"); dot.className = "ava"; dot.width = 132; dot.height = 132;
+      drawMochi(dot.getContext("2d"), 66, 80, 46, parseLook(p.look, i));
       const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = p.name;
       const role = document.createElement("span"); role.className = "role";
       role.textContent = [p.id === d.you ? "나" : "", p.id === d.host ? "방장" : "", i % 2 ? "오른쪽 팀" : "왼쪽 팀"].filter(Boolean).join(" · ");
@@ -190,6 +193,59 @@ async function loadStats() {
   } catch { serverOK = false; $("online").hidden = true; }
 }
 
+// ── 내 방: 캐릭터 꾸미기 ──
+function renderCloset() {
+  const mk = (boxId, items, key, paint) => {
+    const box = $(boxId); box.innerHTML = "";
+    items.forEach((it, i) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.setAttribute("aria-pressed", String(look[key] === i));
+      paint(b, it, i);
+      b.addEventListener("click", () => { look[key] = i; saveLook(); });
+      box.append(b);
+    });
+  };
+  mk("pickColor", BODY, "c", (b, it) => { b.className = "swatch"; b.style.background = it.body; b.style.borderColor = it.dark; b.title = it.name; b.setAttribute("aria-label", it.name); });
+  mk("pickFace", FACES, "f", (b, it) => { b.className = "chipbtn"; b.textContent = it; });
+  mk("pickHat", HATS, "h", (b, it) => { b.className = "chipbtn"; b.textContent = it; });
+}
+function saveLook() { store.set("hp_look", lookStr(look)); renderCloset(); }
+
+const pointer = { x: 0.7, y: 0.3 };
+function paintRoom(t) {
+  const cv = $("avatarCv");
+  const c = cv.getContext("2d"), W = cv.width, H = cv.height, s = t / 1000;
+  // 벽과 바닥
+  c.fillStyle = "#ffe3ea"; c.fillRect(0, 0, W, H);
+  c.fillStyle = "rgba(255,255,255,.55)";
+  for (let x = 30; x < W; x += 90) c.fillRect(x, 0, 34, 380);
+  c.fillStyle = "#e8b98a"; c.fillRect(0, 380, W, H - 380);
+  c.fillStyle = "#d9a673"; c.fillRect(0, 380, W, 10);
+  // 창문
+  c.fillStyle = "#9ad8ff"; c.strokeStyle = "#2b2d6e"; c.lineWidth = 6;
+  c.beginPath(); c.roundRect(60, 60, 170, 150, 16); c.fill(); c.stroke();
+  c.fillStyle = "#fff"; c.beginPath(); c.ellipse(120 + Math.sin(s * 0.4) * 20, 120, 34, 14, 0, 0, 7); c.fill();
+  c.beginPath(); c.moveTo(145, 60); c.lineTo(145, 210); c.moveTo(60, 135); c.lineTo(230, 135); c.stroke();
+  // 오락기
+  c.fillStyle = "#2b2d6e"; c.beginPath(); c.roundRect(520, 150, 150, 250, 14); c.fill();
+  c.fillStyle = "#ffc93c"; c.beginPath(); c.roundRect(536, 168, 118, 86, 8); c.fill();
+  c.fillStyle = "#ff5d73"; c.beginPath(); c.arc(566, 296, 12, 0, 7); c.fill();
+  c.fillStyle = "#8ed081"; c.beginPath(); c.arc(612, 290, 8, 0, 7); c.arc(636, 302, 8, 0, 7); c.fill();
+  c.fillStyle = "#2b2d6e"; c.font = "700 26px Jua, sans-serif"; c.textAlign = "center"; c.fillText(Math.floor(s) % 2 ? "한판!" : "GO!", 595, 220);
+  // 깔개
+  c.fillStyle = "#ff8fab"; c.beginPath(); c.ellipse(330, 470, 190, 44, 0, 0, 7); c.fill();
+  c.strokeStyle = "#fff"; c.lineWidth = 5; c.setLineDash([14, 12]); c.beginPath(); c.ellipse(330, 470, 160, 32, 0, 0, 7); c.stroke(); c.setLineDash([]);
+  // 캐릭터 (통통 튄다)
+  const hop = Math.abs(Math.sin(s * 2.2)), y = 372 - hop * 26;
+  c.fillStyle = "rgba(80,50,20,.2)"; c.beginPath(); c.ellipse(330, 468, 84 - hop * 14, 14, 0, 0, 7); c.fill();
+  const ang = Math.atan2(pointer.y * H - y, pointer.x * W - 330);
+  drawMochi(c, 330, y, 100, look, { ang, sq: (hop - 0.5) * 0.12 });
+}
+function roomLoop(t) {
+  requestAnimationFrame(roomLoop);
+  if (!$("v-home").hidden) paintRoom(t);
+}
+
 // ── 후원 ──
 function openDonate() {
   const box = $("dList"); box.innerHTML = "";
@@ -218,6 +274,12 @@ function init() {
   document.title = SITE.name + " — 가입 없이 친구랑 바로 한 판";
   $("nick").value = store.get("hp_name") || "";
   renderCards();
+  renderCloset();
+  store.set("hp_look", lookStr(look));
+  $("randLook").addEventListener("click", () => { look = randomLook(); saveLook(); });
+  window.addEventListener("pointermove", (e) => { const r = $("avatarCv").getBoundingClientRect(); if (r.width) { pointer.x = (e.clientX - r.left) / r.width; pointer.y = (e.clientY - r.top) / r.height; } });
+  paintRoom(0);
+  requestAnimationFrame(roomLoop);
   const setMute = () => { $("muteBtn").textContent = muted ? "소리 끔" : "소리 켬"; $("muteBtn").setAttribute("aria-pressed", String(muted)); };
   setMute();
   $("muteBtn").addEventListener("click", () => { muted = !muted; store.set("hp_muted", muted ? "1" : "0"); setMute(); });
