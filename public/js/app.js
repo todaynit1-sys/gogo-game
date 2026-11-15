@@ -1,6 +1,6 @@
 // 한판 오락실 — 로비, 방 대기실, 게임 실행
 import { SITE, GAMES } from "./config.js";
-import { BODY, FACES, HATS, drawMochi, parseLook, lookStr, randomLook } from "./avatar.js?v=1";
+import { BODY, FACES, HATS, PATTERNS, ACCS, drawMochi, parseLook, lookStr, randomLook } from "./avatar.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -16,7 +16,7 @@ let offline = null;       // 혼자/로컬 다시 하기용 설정
 let gameId = null, sawLobby = false, overPending = false;
 
 // 게임 모듈은 고를 때 불러온다
-const VER = "?v=6";
+const VER = "?v=7";
 const mods = {};
 const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" + VER));
 
@@ -241,15 +241,24 @@ function renderCloset() {
     const box = $(boxId); box.innerHTML = "";
     items.forEach((it, i) => {
       const b = document.createElement("button");
-      b.type = "button"; b.setAttribute("aria-pressed", String(look[key] === i));
+      b.type = "button"; b.setAttribute("aria-pressed", String(look[key] === i && !(key === "c" && look.hex)));
       paint(b, it, i);
-      b.addEventListener("click", () => { look[key] = i; saveLook(); });
+      b.addEventListener("click", () => { look[key] = i; if (key === "c") look.hex = null; saveLook(); });
       box.append(b);
     });
   };
   mk("pickColor", BODY, "c", (b, it) => { b.className = "swatch"; b.style.background = it.body; b.style.borderColor = it.dark; b.title = it.name; b.setAttribute("aria-label", it.name); });
   mk("pickFace", FACES, "f", (b, it) => { b.className = "chipbtn"; b.textContent = it; });
   mk("pickHat", HATS, "h", (b, it) => { b.className = "chipbtn"; b.textContent = it; });
+  mk("pickPattern", PATTERNS, "m", (b, it) => { b.className = "chipbtn"; b.textContent = it; });
+  mk("pickAcc", ACCS, "a", (b, it) => { b.className = "chipbtn"; b.textContent = it; });
+  // 직접 고르는 색
+  const wrap = document.createElement("label");
+  wrap.className = "swatch custom" + (look.hex ? " on" : ""); wrap.title = "색 직접 고르기";
+  const inp = document.createElement("input");
+  inp.type = "color"; inp.value = "#" + (look.hex || "ff8fab"); inp.setAttribute("aria-label", "색 직접 고르기");
+  inp.addEventListener("input", () => { look.hex = inp.value.slice(1).toLowerCase(); store.set("hp_look", lookStr(look)); wrap.classList.add("on"); for (const s of $("pickColor").querySelectorAll("button")) s.setAttribute("aria-pressed", "false"); });
+  wrap.append(inp); $("pickColor").append(wrap);
 }
 function saveLook() { store.set("hp_look", lookStr(look)); renderCloset(); }
 

@@ -25,7 +25,7 @@ function cleanName(raw) {
 }
 
 function cleanLook(raw) {
-  return /^\d{1,2}\.\d{1,2}\.\d{1,2}$/.test(String(raw || "")) ? String(raw) : "";
+  return /^\d{1,2}(\.\d{1,2}){2,4}(\.[0-9a-f]{6})?$/.test(String(raw || "")) ? String(raw) : "";
 }
 
 function lobbyStub(env) {

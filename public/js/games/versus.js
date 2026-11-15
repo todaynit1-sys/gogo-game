@@ -11,7 +11,7 @@
 //   bot(판, mem, level, dt)
 
 import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, label, BOT_NAMES } from "./kit.js?v=1";
-import { drawMochi, parseLook } from "../avatar.js?v=1";
+import { drawMochi, parseLook } from "../avatar.js?v=2";
 
 const K_SOLO = { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", ArrowDown: "D", KeyS: "D", ArrowUp: "rot", KeyW: "rot", KeyX: "rot", KeyZ: "rot2", Space: "drop", Enter: "drop" };
 const K_P1 = { KeyA: "L", KeyD: "R", KeyS: "D", KeyW: "rot", KeyG: "rot2", KeyF: "drop" };

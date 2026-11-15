@@ -52,8 +52,10 @@ main { width: 100%; max-width: 1040px; margin: 0 auto; padding: 24px 16px 40px; 
 .pick { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; width: 100%; }
 .swatches, .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .swatch { width: 42px; height: 42px; border-radius: 50%; border: 4px solid; padding: 0; }
-.swatch[aria-pressed="true"] { outline: 3px solid var(--navy); outline-offset: 3px; }
-.chipbtn { font-family: var(--display); font-size: 17px; background: #fff; color: var(--navy); border: 2px solid var(--navy); border-radius: 999px; padding: 5px 14px; min-height: 40px; }
+.swatch[aria-pressed="true"], .swatch.custom.on { outline: 3px solid var(--navy); outline-offset: 3px; }
+.swatch.custom { position: relative; overflow: hidden; border-color: var(--navy); background: conic-gradient(#ff5d73, #ffc93c, #8ed081, #7cc6fe, #b79cff, #ff5d73); cursor: pointer; margin: 0; }
+.swatch.custom input { position: absolute; inset: -6px; width: 60px; height: 60px; opacity: 0; cursor: pointer; }
+.chipbtn { font-family: var(--display); font-size: 16px; background: #fff; color: var(--navy); border: 2px solid var(--navy); border-radius: 999px; padding: 5px 14px; min-height: 40px; }
 .chipbtn[aria-pressed="true"] { background: var(--navy); color: #fff; }
 .joinbox { background: var(--paper); border: var(--bd); border-radius: var(--r); padding: 12px 14px; box-shadow: var(--shadow); max-width: 380px; margin-top: 26px; }
 label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 4px; }

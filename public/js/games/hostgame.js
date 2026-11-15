@@ -12,7 +12,7 @@
 //   noPad: 방향 버튼 없이 터치 끌기만 쓰는 게임
 
 import { sound, makeLoop, fit, keyboard, touchPad, label, BOT_NAMES } from "./kit.js?v=1";
-import { lookStr } from "../avatar.js?v=1";
+import { lookStr } from "../avatar.js?v=2";
 
 export const L = 1, R = 2, U = 4, D = 8, A = 16, P = 32;   // P = 화면을 끌고 있는 중
 const DIRS = L | R | U | D;

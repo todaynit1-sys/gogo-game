@@ -2,7 +2,7 @@
 // 선을 긋는 동안 누가 그 선을 밟으면 탈락(잠시 뒤 새 자리에서 다시 시작). 90초 뒤 땅이 가장 넓은 사람이 승리.
 
 import { startHostGame, L, R, U, D } from "./hostgame.js?v=1";
-import { drawMochi, parseLook } from "../avatar.js?v=1";
+import { drawMochi, parseLook } from "../avatar.js?v=2";
 import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=1";
 
 const GW = 48, GH = 27, CELL = 20, N = GW * GH, W = 960, H = 540;
