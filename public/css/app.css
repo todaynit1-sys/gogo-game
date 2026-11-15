@@ -92,6 +92,7 @@ input[type="text"], input:not([type]) { width: 100%; min-height: 44px; border: 2
 .back { background: none; border: 0; color: var(--navy); font-size: 18px; padding: 8px 4px; min-height: 44px; }
 .gamehead { display: flex; gap: 22px; align-items: center; margin: 6px 0 24px; }
 .gamehead p { color: var(--muted); margin: 0; }
+.solo-mode { margin: 0 0 14px; }
 .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .mode { background: var(--paper); border: var(--bd); border-radius: var(--r); padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
 .mode p { font-size: 14.5px; color: var(--muted); flex: 1; }

@@ -109,7 +109,7 @@ export function startHostGame(G, opts) {
   function tick(dt) {
     t += dt;
     if (iAmHost()) {
-      if (!sim) sim = snap ? (G.adopt ? G.adopt(snap) : snap) : G.init(buildSeats(), { mode: room ? room.mode | 0 : 0, level });
+      if (!sim) sim = snap ? (G.adopt ? G.adopt(snap) : snap) : G.init(buildSeats(), { mode: room ? room.mode | 0 : opts.mode | 0, level });
       const masks = inputs(sim);
       G.step(sim, masks, aims);
       if (kind === "online" && sim.tick % G.sendEvery === 0) opts.send("s" + JSON.stringify(G.pack ? G.pack(sim) : sim));

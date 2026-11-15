@@ -14,15 +14,16 @@ let muted = store.get("hp_muted") === "1";
 let musicOn = store.get("hp_music") !== "0";
 const ui = sound(() => muted);      // 화면 단추 소리
 // 게임마다 어울리는 배경음악
-const THEME = { volley: "sport", soccer: "sport", dodge: "sport", bomb: "tense", land: "tense", blocks: "puzzle", chain: "puzzle", cannon: "chill", sling: "chill", pool: "chill", alkkagi: "chill", yut: "yut" };
+const THEME = { baseball: "sport", volley: "sport", soccer: "sport", dodge: "sport", bomb: "tense", land: "tense", blocks: "puzzle", chain: "puzzle", cannon: "chill", sling: "chill", pool: "chill", alkkagi: "chill", yut: "yut" };
 let look = store.get("hp_look") ? parseLook(store.get("hp_look")) : randomLook();
 let current = GAMES[0];   // 고른 게임
 let ws = null, room = null, game = null, pingTimer = null, leaving = false;
 let offline = null;       // 혼자/로컬 다시 하기용 설정
+let soloMode = 0;         // 혼자·한 키보드에서 고른 경기 방식(야구의 3·6·9회 등)
 let gameId = null, sawLobby = false, overPending = false;
 
 // 게임 모듈은 고를 때 불러온다
-const VER = "?v=17";
+const VER = "?v=18";
 const mods = {};
 const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" + VER));
 
@@ -159,6 +160,7 @@ const THUMBS = {
   dodge: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#c9965a"/><rect x="16" y="16" width="144" height="148" fill="#f4c7c0"/><rect x="160" y="16" width="144" height="148" fill="#c8dcf2"/><g fill="none" stroke="#fff" stroke-width="4"><rect x="16" y="16" width="288" height="148"/><line x1="160" y1="16" x2="160" y2="164" stroke-width="6"/></g><g stroke="#2b2d6e" stroke-width="4"><circle cx="86" cy="96" r="21" fill="#ff9db5"/><circle cx="240" cy="76" r="21" fill="#8ecbff"/></g><path d="M118 88h34M122 100h26" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="176" cy="86" r="12" fill="#e8453c" stroke="#9b2f3a" stroke-width="3"/></svg>`,
   pool: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#f6e6c6"/><rect x="14" y="20" width="292" height="140" rx="20" fill="#8a5a3c"/><rect x="30" y="36" width="260" height="108" rx="6" fill="#2f8f5b"/><g fill="#15122a"><circle cx="32" cy="38" r="9"/><circle cx="160" cy="34" r="8"/><circle cx="288" cy="38" r="9"/><circle cx="32" cy="142" r="9"/><circle cx="160" cy="146" r="8"/><circle cx="288" cy="142" r="9"/></g><g stroke="#2a2440" stroke-width="2"><circle cx="210" cy="90" r="9" fill="#ffc93c"/><circle cx="226" cy="81" r="9" fill="#3d6fd6"/><circle cx="226" cy="99" r="9" fill="#e8453c"/><circle cx="242" cy="72" r="9" fill="#2f9e5a"/><circle cx="242" cy="90" r="9" fill="#fffdf6"/><circle cx="242" cy="108" r="9" fill="#8a55d6"/><circle cx="96" cy="90" r="10" fill="#fffdf6"/></g><path d="M84 90H20" stroke="#e9c887" stroke-width="6" stroke-linecap="round"/></svg>`,
   yut: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#f7ecd4"/><rect x="24" y="16" width="148" height="148" rx="12" fill="#fffaf0" stroke="#8a5a3c" stroke-width="5"/><g fill="none" stroke="#c79a63" stroke-width="3"><rect x="40" y="32" width="116" height="116"/><path d="M156 32L40 148M40 32l116 116"/></g><g fill="#fff" stroke="#8a5a3c" stroke-width="2.5"><circle cx="156" cy="148" r="9" fill="#ffe3a3"/><circle cx="156" cy="32" r="9" fill="#ffe3a3"/><circle cx="40" cy="32" r="9" fill="#ffe3a3"/><circle cx="40" cy="148" r="9" fill="#ffe3a3"/><circle cx="98" cy="90" r="9" fill="#ffe3a3"/></g><circle cx="156" cy="101" r="11" fill="#ff9db5" stroke="#2b2d6e" stroke-width="3"/><circle cx="64" cy="56" r="11" fill="#8ecbff" stroke="#2b2d6e" stroke-width="3"/><g stroke="#8a5a3c" stroke-width="3"><rect x="196" y="40" width="20" height="96" rx="10" fill="#f6dca6" transform="rotate(-12 206 88)"/><rect x="226" y="36" width="20" height="96" rx="10" fill="#c98a4a" transform="rotate(6 236 84)"/><rect x="256" y="44" width="20" height="96" rx="10" fill="#f6dca6" transform="rotate(-4 266 92)"/><rect x="284" y="40" width="20" height="96" rx="10" fill="#f6dca6" transform="rotate(14 294 88)"/></g></svg>`,
+  baseball: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#7cc9ff"/><rect y="40" width="320" height="34" fill="#3d4a8a"/><g fill="#ffc93c"><circle cx="20" cy="50" r="4"/><circle cx="60" cy="58" r="4"/><circle cx="100" cy="50" r="4"/><circle cx="220" cy="56" r="4"/><circle cx="270" cy="50" r="4"/></g><rect y="74" width="320" height="106" fill="#5dbb63"/><path d="M160 80L280 140L160 200L40 140Z" fill="#d9a46a"/><path d="M160 104L230 140L160 176L90 140Z" fill="#5dbb63"/><circle cx="160" cy="98" r="11" fill="#ffd66b" stroke="#2b2d6e" stroke-width="3"/><g stroke="#2b2d6e" stroke-width="3"><rect x="138" y="118" width="44" height="40" rx="2" fill="none" stroke="#fff" stroke-dasharray="5 4"/><circle cx="96" cy="150" r="18" fill="#ff9db5"/></g><rect x="104" y="112" width="58" height="9" rx="4.5" fill="#c98a4a" stroke="#8a5a3c" stroke-width="2.5" transform="rotate(-30 110 140)"/><circle cx="166" cy="128" r="7" fill="#fff" stroke="#e8453c" stroke-width="2"/></svg>`,
   land: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#d9f2d2"/><g stroke="#2b2d6e" stroke-width="4"><path d="M30 30h110v70H80v50H30z" fill="#ff9db5"/><path d="M200 60h90v90h-60v-40h-30z" fill="#8ecbff"/><path d="M140 66h40v54" fill="none" stroke-dasharray="8 7"/><rect x="170" y="112" width="20" height="20" fill="#ff5d73"/></g></svg>`,
 };
 
@@ -188,6 +190,20 @@ async function openGame(g) {
   let mod; try { mod = await loadMod(g.id); } catch { return toast("게임을 불러오지 못했어요. 새로고침해 주세요"); }
   if (current !== g) return;
   $("soloText").textContent = mod.meta.soloText;
+  // 경기 길이 같은 선택지 (혼자·한 키보드용)
+  const sm = mod.meta.soloModes, seg = $("soloModeSeg");
+  $("soloModeRow").hidden = !sm; seg.innerHTML = "";
+  if (sm) {
+    $("soloModeLabel").textContent = mod.meta.modeLabel || "경기 방식";
+    const saved = +store.get("hp_mode_" + g.id);
+    soloMode = sm.some(([v]) => v === saved) ? saved : sm[0][0];
+    for (const [val, text] of sm) {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = text;
+      b.setAttribute("aria-pressed", String(val === soloMode));
+      b.addEventListener("click", () => { soloMode = val; store.set("hp_mode_" + g.id, String(val)); for (const x of seg.children) x.setAttribute("aria-pressed", String(x === b)); });
+      seg.append(b);
+    }
+  } else soloMode = 0;
   $("localCard").hidden = !mod.meta.local;
   for (const [k, v] of mod.meta.howto) {
     const li = document.createElement("li"), b = document.createElement("b");
@@ -204,7 +220,7 @@ async function playOffline(cfg) {
   $("playInfo").textContent = current.name + " · " + (cfg.kind === "solo" ? "혼자 · " + { easy: "쉬움", normal: "보통", hard: "어려움" }[cfg.level] : "한 키보드 2인");
   show("play");
   game = mod.start({
-    canvas: $("cv"), touchEl: $("touch"), kind: cfg.kind, level: cfg.level,
+    canvas: $("cv"), touchEl: $("touch"), kind: cfg.kind, level: cfg.level, mode: cfg.mode,
     myName: myName() || "나", look, isMuted: () => muted,
     onOver: (r) => { $("resTitle").textContent = (r && r.title) || "한 판 더 할까요?"; $("resSub").textContent = lastRec; $("result").hidden = false; },
   });
@@ -546,8 +562,8 @@ function init() {
     try { const r = await api("/api/quick?game=" + current.id); connect(r.code, { pub: true }); if (r.fresh) toast("기다리는 사람이 없어 새 방을 열었어요"); }
     catch { toast("서버에 연결하지 못했어요"); }
   });
-  for (const b of document.querySelectorAll("[data-solo]")) b.addEventListener("click", () => playOffline({ kind: "solo", level: b.dataset.solo }));
-  $("local2").addEventListener("click", () => playOffline({ kind: "local", level: "normal" }));
+  for (const b of document.querySelectorAll("[data-solo]")) b.addEventListener("click", () => playOffline({ kind: "solo", level: b.dataset.solo, mode: soloMode }));
+  $("local2").addEventListener("click", () => playOffline({ kind: "local", level: "normal", mode: soloMode }));
 
   $("leaveRoom").addEventListener("click", goHome);
   $("copyLink").addEventListener("click", () => room && copy(`${location.origin}/?r=${room.code}`, "초대 링크를 복사했어요. 친구에게 보내 주세요"));

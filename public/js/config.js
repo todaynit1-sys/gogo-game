@@ -24,6 +24,7 @@ export const GAMES = [
   { id: "soccer", name: "떡 축구", tag: "2~4명 · 1대1 / 2대2", desc: "위에서 내려다보는 미니 축구. 몸으로 밀고 뻥 차서 골!", ready: true },
   { id: "cannon", name: "쾅쾅 포격전", tag: "2~4명 · 번갈아 쏘기", desc: "각도와 힘, 바람을 읽고 포탄을 날려요. 땅이 파이는 포격 대결.", ready: true },
   { id: "sling", name: "새총 무너뜨리기", tag: "1~4명 · 번갈아 쏘기", desc: "새총으로 몸을 날려 성을 무너뜨리고 도깨비를 잡아요.", ready: true },
+  { id: "baseball", name: "떡 야구", tag: "1~2명 · 3·6·9회", desc: "구종을 섞어 던지고, 타이밍 맞춰 홈런! 1대1로 번갈아 던지고 치는 야구.", ready: true },
   { id: "dodge", name: "떡 피구", tag: "2~4명 · 1대1 / 2대2", desc: "공을 던져 맞히고, 날아오는 공은 잡아서 되갚기!", ready: true },
   { id: "pool", name: "미니 당구", tag: "1~4명 · 번갈아 치기", desc: "흰 공을 끌어 쳐서 색 공을 구멍에 쏙. 넣으면 한 번 더!", ready: true },
   { id: "yut", name: "윷놀이", tag: "2~4명 · 번갈아 던지기", desc: "도·개·걸·윷·모! 잡고 업고 지름길로, 말을 먼저 다 내보내면 승리.", ready: true },
