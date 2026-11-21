@@ -12,7 +12,7 @@ const WIN_SCORE = 7, SKY = -900;
 
 const L = 1, R = 2, U = 4, A = 8, D = 16;
 const HOME = { 2: [240, 720], 4: [310, 650, 130, 830] };
-const SKILL = { easy: 0.38, normal: 0.68, hard: 0.93 };
+const SKILL = { easy: 0.38, normal: 0.6, hard: 0.95 };
 const COURTS = [
   { name: "해변", sky: ["#6ec6ff", "#e4f6ff"], sun: "#fff3b0", cloud: "rgba(255,255,255,.9)", hill: ["#a8e0a0", "#8fd18a"], floor: "#f6dca6", edge: "#e9c887" },
   { name: "노을", sky: ["#ff9a76", "#ffe3b0"], sun: "#fff0c2", cloud: "rgba(255,236,214,.8)", hill: ["#e9a36b", "#d98a5a"], floor: "#f3c98b", edge: "#dba866" },
@@ -192,7 +192,7 @@ function botMask(s, i, mem, skill) {
     mem.style = Math.random();
   }
   // 공이 어디로, 언제 떨어질지 미리 계산. 실력이 낮을수록 공을 늦게 다시 읽는다.
-  const lag = skill > 0.9 ? 2 : skill > 0.6 ? 9 : 17;
+  const lag = skill > 0.9 ? 2 : skill > 0.5 ? 11 : 17;
   if (mem.pt == null || s.tick - mem.pt >= lag || s.ph !== mem.pph || s.tick < mem.pt) {
     let x = b.x, y = b.y, vx = b.vx, vy = b.vy, k = 0;
     const hitY = GROUND - PR * 2 - BR + 14;
@@ -452,10 +452,12 @@ export function start(opts) {
     ctx.fillStyle = "rgba(80,50,20,.16)"; ctx.beginPath(); ctx.ellipse(b.x, GROUND + 4, BR * Math.max(0.35, 1 - (GROUND - b.y) / 900), 5, 0, 0, 7); ctx.fill();
     if (b.y < -BR) {      // 화면 위로 나간 공: 어디로 떨어질지 화살표로 알려 준다
       const up = Math.min(1, (-b.y - BR) / 500), r = 15 - up * 6, mx = Math.max(26, Math.min(W - 26, b.x));
+      ctx.save(); if (Math.abs(mx - W / 2) < 130) ctx.translate(0, 96);      // 점수판 밑으로 비켜 그린다
       ctx.fillStyle = "#ff5d73"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(mx, 8); ctx.lineTo(mx - 13, 26); ctx.lineTo(mx + 13, 26); ctx.closePath(); ctx.stroke(); ctx.fill();
       ctx.fillStyle = "#fff"; ctx.strokeStyle = "#3d6fd6"; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(mx, 46, r, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.restore();
     }
     ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(s.tick * 0.02 + b.x * 0.02);
     ctx.fillStyle = "#fff"; ctx.strokeStyle = "#3d6fd6"; ctx.lineWidth = 3.5;
@@ -527,7 +529,7 @@ export function start(opts) {
       lastSentMask = -1;
     },
     stop() { stopLoop(); kb.stop(); pad.stop(); if (hurrySaid) emit("hurry", false); },
-    peek() { return { host: iAmHost(), tick: view ? view.tick : -1, sc: view ? view.sc : null, sl: view ? view.sl : 0, p: view ? view.p.map((q) => [Math.round(q.x), q.dv, q.rc]) : [] }; },
+    peek() { return { b: view ? view.b : null, host: iAmHost(), tick: view ? view.tick : -1, sc: view ? view.sc : null, sl: view ? view.sl : 0, p: view ? view.p.map((q) => [Math.round(q.x), q.dv, q.rc]) : [] }; },
   };
 }
 

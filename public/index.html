@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=9">
+<link rel="stylesheet" href="/css/app.css?v=10">
 </head>
 <body>
 <header class="top">
@@ -69,6 +69,7 @@
       <div class="seg" id="gameFilter"></div>
       <button class="btn btn-coral" id="randGame" type="button">아무 게임이나 한 판</button>
     </div>
+    <div class="recent" id="recentRow" hidden><span class="optlabel">최근에 한 게임</span><div class="chips" id="recentPick"></div></div>
     <div class="cards" id="cards"></div>
     <form class="joinbox" id="joinForm">
       <label for="joinCode">친구에게 방 코드를 받았다면</label>
@@ -197,6 +198,6 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script type="module" src="/js/app.js?v=23"></script>
+<script type="module" src="/js/app.js?v=24"></script>
 </body>
 </html>

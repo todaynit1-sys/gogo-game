@@ -113,8 +113,8 @@ function settle(s) {
   let frameDone = false, reset = false;
   if (!last) {
     if (p.bl === 0 && left === 0) { frameDone = true; say(s, "스트라이크!"); s.xc++; }
-    else if (p.bl === 0) { p.bl = 1; if (!k) say(s, s.ball.gut ? "도랑~" : "아깝다!"); }
-    else { frameDone = true; if (left === 0) { say(s, "스페어!"); s.xc++; } else if (!k) say(s, s.ball.gut ? "도랑~" : "아깝다!"); }
+    else if (p.bl === 0) { p.bl = 1; say(s, k ? k + "개!" : s.ball.gut ? "도랑~" : "아깝다!"); }
+    else { frameDone = true; if (left === 0) { say(s, "스페어!"); s.xc++; } else say(s, k ? k + "개!" : s.ball.gut ? "도랑~" : "아깝다!"); }
   } else {
     const r = p.rolls, i0 = r.length - 1 - p.bl, first = r[i0];
     if (p.bl === 0) { if (left === 0) { reset = true; say(s, "스트라이크!"); s.xc++; } p.bl = 1; }

@@ -77,6 +77,7 @@ input[type="text"], input:not([type]) { width: 100%; min-height: 44px; border: 2
 .sechead { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin: 6px 0 16px; }
 .sechead .btn { margin-left: auto; }
 .sechead .seg button { font-size: 16px; padding: 6px 14px; }
+.recent { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: -4px 0 16px; }
 .newb { font-size: 12.5px; background: var(--coral); color: #fff; border-radius: 999px; padding: 2px 9px; }
 .closet-toggle { display: none; }
 .closet-body { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }

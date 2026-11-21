@@ -23,7 +23,7 @@ let soloMode = 0;         // 혼자·한 키보드에서 고른 경기 방식(�
 let gameId = null, sawLobby = false, overPending = false;
 
 // 게임 모듈은 고를 때 불러온다
-const VER = "?v=20";
+const VER = "?v=21";
 const mods = {};
 const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" + VER));
 
@@ -31,6 +31,7 @@ const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" +
 function show(name) {
   for (const v of document.querySelectorAll(".view")) v.hidden = v.id !== "v-" + name;
   document.documentElement.classList.toggle("playing", name === "play");
+  if (name === "home") renderRecent();
   if (name === "home" || name === "game") leaveFullscreen();
   window.scrollTo(0, 0);
   updateRotTip();
@@ -176,7 +177,21 @@ function renderFilters() {
     box.append(b);
   }
 }
+const loadLast = () => { try { return JSON.parse(store.get("hp_last") || "[]"); } catch { return []; } };
+function markPlayed(id) { const l = loadLast().filter((x) => x !== id); l.unshift(id); store.set("hp_last", JSON.stringify(l.slice(0, 3))); }
+function renderRecent() {
+  const row = $("recentRow"), box = $("recentPick"); box.innerHTML = "";
+  const list = loadLast().map((id) => GAMES.find((g) => g.id === id && g.ready)).filter(Boolean);
+  row.hidden = !list.length;
+  for (const g of list) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip chip-line"; b.textContent = g.name;
+    b.addEventListener("click", () => openGame(g));
+    box.append(b);
+  }
+}
 function renderCards() {
+  renderRecent();
   const box = $("cards"); box.innerHTML = "";
   const recs = loadRec();
   const list = GAMES.filter((g) => gameFilter === "all" || (gameFilter === "won" ? recs[g.id] && recs[g.id].w : g.kind === gameFilter));
@@ -198,7 +213,7 @@ function renderCards() {
 }
 
 async function openGame(g) {
-  current = g;
+  current = g; markPlayed(g.id);
   $("gName").textContent = g.name; $("gDesc").textContent = g.desc;
   $("gThumb").innerHTML = THUMBS[g.id] || "";
   $("howList").innerHTML = "";
