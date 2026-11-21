@@ -18,6 +18,7 @@ export const SITE = {
 
 // 게임 목록. ready:false 는 "준비 중" 카드로만 보인다.
 export const GAMES = [
+  { id: "rally", kind: "rt", name: "노을 옥상 라켓", tag: "1~2명 · 3D · 1대1", desc: "해질녘 옥상 코트에서 벌이는 3D 라켓 한판. 타이밍 맞춰 '딱 좋아!' 한 방.", ready: true },
   { id: "volley", kind: "rt", name: "통통 배구", tag: "2~4명 · 1대1 / 2대2", desc: "말랑한 떡 친구들의 한판 배구. 강타와 슬라이딩으로 랠리를 이어 가요.", ready: true },
   { id: "bomb", kind: "rt", name: "폭탄 미로", tag: "2~4명", desc: "폭탄으로 상자를 부수고 끝까지 살아남는 사람이 승리.", ready: true },
   { id: "land", kind: "rt", name: "땅따먹기", tag: "2~4명", desc: "선을 그어 내 땅을 넓히고, 상대 선을 밟아 끊어라.", ready: true },
