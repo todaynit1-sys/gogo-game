@@ -174,7 +174,7 @@ function step(s, masks, aims) {
 }
 
 // ── 봇 ──
-const ERR = { easy: [26, 7], normal: [13, 3.6], hard: [5, 1.5] };
+const ERR = { easy: [32, 8.5], normal: [16, 4.4], hard: [5, 1.5] };
 function bot(s, i, mem, level) {
   if (s.over || s.tick < START || s.ph !== 0 || s.turn !== i) { mem.tn = -1; return 0; }
   if (mem.tn !== s.tn) {

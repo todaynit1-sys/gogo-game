@@ -6,9 +6,10 @@ import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle } from "./kit.js?v=3";
 
 export const CW = 3, CL = 6.6, NET = 0.95;                       // 코트 반폭, 반길이, 네트 높이 (x 가로, y 높이, z 길이)
-const W = 960, H = 540, DT = 1 / 60, GR = 11, BR = 0.13, SPEED = 4.1, REACH = 1.35, REACH_Y = 2.4, START = 70;
+const W = 960, H = 540, DT = 1 / 60, GR = 11, BR = 0.13, SPEED = 4.7, REACH = 1.8, REACH_Y = 2.4, START = 70;
 const sd = (i) => (i === 0 ? 1 : -1);                             // 0번은 z>0 쪽, 1번은 z<0 쪽
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const bcap = (s) => 5.5 - Math.min(3.6, Math.max(0, s.rl - 8) * 0.3);      // 랠리가 길어지면 공이 낮게 깔려서 받기 어려워진다
 const inCourt = (x, z) => Math.abs(x) <= CW + 0.06 && Math.abs(z) <= CL + 0.06;
 
 function serveSetup(s) {
@@ -40,12 +41,13 @@ function point(s, w, text) {
 function hit(s, i, q, m, serve) {
   const p = s.p[i], b = s.b, side = sd(i), lob = p.sk === 1;
   const ax = ((m & R ? 1 : 0) - (m & L ? 1 : 0)) * side, deep = m & U, short = m & D;
-  let tx = ax ? ax * CW * 0.8 : clamp(b.x * 0.35, -CW * 0.5, CW * 0.5);
+  let tx = ax ? ax * CW * (0.7 + Math.min(0.18, s.rl * 0.01)) : clamp(b.x * 0.35, -CW * 0.5, CW * 0.5);
   let tz = -side * CL * (short ? 0.27 : deep ? 0.88 : lob ? 0.8 : 0.7);
-  const sc = [1.6, 0.85, 0.22][q] * (serve ? 0.6 : 1), ang = Math.random() * 6.283, rad = Math.sqrt(Math.random()) * sc;
+  const sc = [0.95, 0.5, 0.18][q] * (serve ? 0.6 : 1) * (1 + Math.max(0, s.rl - 10) * 0.14),      // 랠리가 길어지면 손이 떨려 공이 흩어진다
+    ang = Math.random() * 6.283, rad = Math.sqrt(Math.random()) * sc;
   tx += Math.cos(ang) * rad; tz += Math.sin(ang) * rad;
   const dist = Math.hypot(tx - b.x, tz - b.z);
-  let T = lob ? Math.max(short ? 1.3 : 1.7, dist / 6.5) : dist / ((short ? 8 : serve ? 12 : 16) * [0.85, 1, 1.25][q]);
+  let T = lob ? Math.max(short ? 1.3 : 1.7, dist / 6.5) : dist / ((short ? 7.5 : serve ? 10 : 13) * [0.85, 1, 1.25][q] * (1 + Math.min(0.7, Math.max(0, s.rl - 4) * 0.04)));
   let vx, vy, vz;
   for (let k = 0; k < 40; k++) {          // 네트를 넘을 만큼 띄운다
     vx = (tx - b.x) / T; vz = (tz - b.z) / T; vy = (BR - b.y + 0.5 * GR * T * T) / T;
@@ -66,7 +68,7 @@ function ballStep(s, live) {
     b.z = (pz >= 0 ? 1 : -1) * 0.07; b.vz *= -0.12; b.vx *= 0.35; b.vy = Math.min(b.vy, 0); s.nc++; s.kc++;
   }
   if (b.y <= BR && b.vy < 0) {
-    b.y = BR; b.vy = Math.min(5.5, -b.vy * 0.72); b.vx *= 0.82; b.vz *= 0.82; if (Math.abs(b.vy) > 0.8) s.bc++; else b.vy = 0;
+    b.y = BR; b.vy = Math.min(bcap(s), -b.vy * 0.72); b.vx *= 0.82; b.vz *= 0.82; if (Math.abs(b.vy) > 0.8) s.bc++; else b.vy = 0;
     if (live && s.lh >= 0) {
       const h = s.lh, o = 1 - h;
       if (s.bn > 0) point(s, h, "득점!");                                             // 두 번 튀었다
@@ -94,7 +96,9 @@ function step(s, masks) {
     p.mv = ax || az ? 1 : 0;
     const press = m & (A | B) ? 1 : 0;
     if (p.sw && ++p.sw > 20) p.sw = 0;
-    if (press && !p.pa && !p.sw && s.ph < 2) { p.sw = 1; p.sk = m & B && !(m & A) ? 1 : 0; s.wc++; }
+    if (press && !p.pa && !p.sw && s.ph < 2) { p.sw = 1; p.au = 0; p.sk = m & B && !(m & A) ? 1 : 0; s.wc++; }
+    // 버튼을 누르고 있으면 공이 가까이 왔을 때 알아서 휘두른다 (타이밍이 어려운 사람을 위해)
+    else if (press && !p.sw && s.ph === 1 && s.lh !== i && s.b.z * side > -0.25 && s.b.y < REACH_Y && Math.hypot(s.b.x - p.x, s.b.z - p.z) < REACH * 0.62) { p.sw = 1; p.au = 1; p.sk = m & B && !(m & A) ? 1 : 0; s.wc++; }
     p.pa = press;
   }
   if (s.ph === 2) {
@@ -105,7 +109,7 @@ function step(s, masks) {
   if (s.ph === 0) {
     hold(s); s.tm++;
     const p = s.p[s.sv];
-    if (p.sw === 1 || s.tm > 420) { if (!p.sw) p.sw = 1; s.ph = 1; s.rl = 0; hit(s, s.sv, 1, masks[s.sv] | 0, true); }
+    if (p.sw === 1 || s.tm > 420 || (p.pa && s.tm > 50)) { if (!p.sw) p.sw = 1; s.ph = 1; s.rl = 0; hit(s, s.sv, 1, masks[s.sv] | 0, true); }
     return;
   }
   ballStep(s, true);
@@ -113,15 +117,15 @@ function step(s, masks) {
   const b = s.b;
   for (let i = 0; i < 2; i++) {
     const p = s.p[i], side = sd(i);
-    if (!(p.sw >= 1 && p.sw <= 10) || s.lh === i || b.z * side < -0.25 || b.y > REACH_Y) continue;
+    if (!(p.sw >= 1 && p.sw <= 14) || s.lh === i || b.z * side < -0.25 || b.y > REACH_Y) continue;
     if (Math.hypot(b.x - p.x, b.z - p.z) > REACH) continue;
     const d = sweet(p, i, b);
-    hit(s, i, d < 0.62 ? 2 : d < 1.05 ? 1 : 0, masks[i] | 0, false);
+    hit(s, i, p.au ? (d < 1.4 ? 1 : 0) : d < 0.8 ? 2 : d < 1.4 ? 1 : 0, masks[i] | 0, false);
   }
 }
 
 // ── 봇 ──
-const LV = { easy: { lag: 14, err: 1.0, thr: 1.15, wit: 0.25, miss: 0.14 }, normal: { lag: 8, err: 0.5, thr: 0.85, wit: 0.6, miss: 0.06 }, hard: { lag: 3, err: 0.16, thr: 0.58, wit: 0.92, miss: 0.015 } };
+const LV = { easy: { lag: 22, err: 1.5, thr: 1.5, wit: 0.12, miss: 0.3 }, normal: { lag: 11, err: 0.9, thr: 1.1, wit: 0.45, miss: 0.13 }, hard: { lag: 3, err: 0.3, thr: 0.78, wit: 0.92, miss: 0.03 } };
 function predict(s, i) {
   const side = sd(i); let { x, y, z, vx, vy, vz } = s.b, land = s.bn > 0;
   for (let k = 0; k < 220; k++) {
@@ -130,7 +134,7 @@ function predict(s, i) {
     if (y <= BR && vy < 0) {
       if (land) return { x, z };
       if (!inCourt(x, z) || z * side < 0) return { out: true };
-      land = true; y = BR; vy = Math.min(5.5, -vy * 0.72); vx *= 0.82; vz *= 0.82;
+      land = true; y = BR; vy = Math.min(bcap(s), -vy * 0.72); vx *= 0.82; vz *= 0.82;
     }
     if (land && (y >= 0.8 || vy <= 0)) return { x, z };
   }
@@ -182,9 +186,15 @@ let stage = null, stageOn = false, stageErr = false;
 function loadStage() {
   if (stage || stageOn || stageErr || typeof document === "undefined") return;
   stageOn = true;
-  import("./rally3d.js?v=2").then((m) => { stage = m; }).catch(() => { stageErr = true; });
+  import("./rally3d.js?v=3").then((m) => { stage = m; }).catch(() => { stageErr = true; });
 }
 const mix = (a, b, t) => a + (b - a) * t;
+function landing(v) {      // 공이 떨어질 자리 (네트에 걸릴 공이면 없음)
+  if (v.ph !== 1 || v.bn > 0) return null;
+  let { x, y, z, vx, vy, vz } = v.b;
+  for (let k = 0; k < 260; k++) { const pz = z; vy -= GR * DT; x += vx * DT; y += vy * DT; z += vz * DT; if (pz * z <= 0 && pz !== z && y < NET) return null; if (y <= BR && vy < 0) return [x, z]; }
+  return null;
+}
 function flat(ctx, v) {      // 3D 를 못 쓰는 기기: 위에서 본 간단한 코트
   ctx.fillStyle = "#f2b27c"; ctx.fillRect(0, 0, W, H);
   const k = 30, ox = W / 2, oy = H / 2 + 10, X = (x) => ox + x * k * 1.6, Y = (z) => oy + z * k;
@@ -208,7 +218,7 @@ function draw(ctx, v, env) {
   }
   let ok = false;
   if (stage) {
-    try { const cv = stage.render(view, { me, t: env.t, touch: env.touch }); if (cv) { ctx.drawImage(cv, 0, 0, W, H); ok = true; } } catch { stageErr = true; stage = null; }
+    try { const cv = stage.render({ ...view, lm: landing(v) }, { me, t: env.t, touch: env.touch }); if (cv) { ctx.drawImage(cv, 0, 0, W, H); ok = true; } } catch { stageErr = true; stage = null; }
   }
   if (!ok) { if (stageErr) flat(ctx, view); else { ctx.fillStyle = "#f2b27c"; ctx.fillRect(0, 0, W, H); label(ctx, "옥상으로 올라가는 중…", W / 2, H / 2, 30, "#fff", "#2b2d6e"); return; } }
 
@@ -236,7 +246,7 @@ function draw(ctx, v, env) {
     ctx.restore();
   }
   if (v.over) label(ctx, v.over.w === env.me ? "이겼다!" : env.me < 0 ? `${v.seats[v.over.w].name} 승리!` : "졌다…", W / 2, H / 2 - 30, 80, "#ffd66b", "#2b2d6e");
-  else if (env.me >= 0 && !env.touch && v.tick < START + 600) label(ctx, "스페이스 강타 · Q 높이 넘기기 · 방향키를 누른 채 치면 그쪽으로 (↓ 짧게, ↑ 깊게)", W / 2, H - 14, 15, "#fff", "rgba(43,45,110,.85)");
+  else if (env.me >= 0 && !env.touch && v.tick < START + 600) label(ctx, "스페이스를 누르고 있으면 공이 오면 알아서 쳐요 · Q 높이 넘기기 · 방향키를 누른 채 치면 그쪽으로", W / 2, H - 14, 15, "#fff", "rgba(43,45,110,.85)");
 }
 
 function fx(v, m, snd, me) {
@@ -276,7 +286,8 @@ export const meta = {
     ["목표", "공을 상대 코트에 넣어 못 받게 하면 1점. 먼저 정한 점수를 내면 승리"],
     ["조작", "이동 방향키(또는 W·A·S·D, 대각선 가능), 스페이스 강타, Q 높이 넘기기"],
     ["방향", "방향키를 누른 채 치면 그쪽으로 가요. ←→ 좌우 구석, ↑ 깊숙이, ↓ 네트 바로 뒤에 살짝"],
-    ["타이밍", "공이 내 바로 앞에 왔을 때 치면 '딱 좋아!' — 더 빠르고 정확해요. 너무 멀리서 휘두르면 공이 흩어져 밖으로 나가기 쉬워요"],
+    ["쉽게 치기", "스페이스(또는 강타 버튼)를 누르고만 있어도 공이 가까이 오면 알아서 쳐요. 바닥의 노란 고리가 공이 떨어질 자리예요 — 그 조금 뒤에 서 있으면 돼요"],
+    ["타이밍", "공이 내 바로 앞에 왔을 때 딱 맞춰 누르면 '딱 좋아!' — 더 빠르고 정확해요"],
     ["규칙", "공은 내 코트에서 한 번까지만 튀어도 돼요(안 튀기고 바로 쳐도 됨). 친 공이 네트에 걸리거나 선 밖에 떨어지면 상대 점수"],
     ["요령", "상대가 뒤에 있으면 ↓로 짧게, 앞에 나와 있으면 Q로 머리 위로 넘겨 보세요"],
   ],

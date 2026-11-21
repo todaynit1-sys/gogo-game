@@ -107,7 +107,7 @@ function step(s, masks) {
 function goal(s, team) { s.sc[team]++; s.lg = team; s.gk++; s.ph = 2; s.tm = 120; }
 
 // ── 봇 ──
-const BOTS = { easy: { skip: 0.35, aim: 0.5, lag: 16 }, normal: { skip: 0.12, aim: 0.72, lag: 7 }, hard: { skip: 0, aim: 0.86, lag: 2 } };
+const BOTS = { easy: { skip: 0.48, aim: 0.42, lag: 20 }, normal: { skip: 0.2, aim: 0.66, lag: 9 }, hard: { skip: 0, aim: 0.86, lag: 2 } };
 
 function bot(s, i, mem, level) {
   if (s.over || s.ph !== 1) return 0;

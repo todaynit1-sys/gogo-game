@@ -219,7 +219,7 @@ function drawNext(ctx, b, x, y, cell) {
 }
 
 // ── 봇: 모든 자리를 놓아 보고 가장 좋은 곳을 고른다 ──
-const BOT = { easy: { d: 0.36, noise: 10 }, normal: { d: 0.17, noise: 3 }, hard: { d: 0.07, noise: 0.3 } };
+const BOT = { easy: { d: 0.46, noise: 14 }, normal: { d: 0.22, noise: 4.5 }, hard: { d: 0.07, noise: 0.3 } };
 
 function plan(b, noise) {
   const p = b.cur; let best = null, c = p.c;

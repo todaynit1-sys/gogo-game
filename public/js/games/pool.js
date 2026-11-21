@@ -163,7 +163,7 @@ function aimInfo(v, ax, ay) {
 }
 
 // ── 봇: 공마다 구멍마다 쳐 보고 가장 좋은 샷을 고른다 ──
-const BOTS = { easy: { err: 0.026, pick: 0.3 }, normal: { err: 0.012, pick: 0.1 }, hard: { err: 0.003, pick: 0 } };
+const BOTS = { easy: { err: 0.034, pick: 0.4 }, normal: { err: 0.016, pick: 0.16 }, hard: { err: 0.003, pick: 0 } };
 
 function simShot(s, ax, ay) {
   const c = { bs: s.bs.map((b) => ({ ...b })), sunk: [], pc: 0, wc: 0, hc: 0 };

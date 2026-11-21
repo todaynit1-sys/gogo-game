@@ -160,7 +160,7 @@ function unpack(o) {
 }
 
 // ── 봇 ──
-const BOTS = { easy: { max: 4, fear: 3 }, normal: { max: 7, fear: 5 }, hard: { max: 11, fear: 6 } };
+const BOTS = { easy: { max: 4, fear: 2 }, normal: { max: 7, fear: 3 }, hard: { max: 11, fear: 6 } };
 const free = (s, x, y) => inb(x, y) && !s.rk[y * GW + x];
 
 function okStep(s, i, d) {

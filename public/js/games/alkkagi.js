@@ -113,7 +113,7 @@ function tryFlick(s, idx, vx, vy, o) {
   return score;
 }
 
-const BOTS = { easy: { err: 0.13, pick: 0.5 }, normal: { err: 0.045, pick: 0.15 }, hard: { err: 0, pick: 0 } };
+const BOTS = { easy: { err: 0.17, pick: 0.6 }, normal: { err: 0.065, pick: 0.22 }, hard: { err: 0, pick: 0 } };
 
 function bot(s, o, mem, level) {
   if (s.over || s.tick < START || s.ph !== 0 || s.turn !== o) { mem.tn = -1; return 0; }

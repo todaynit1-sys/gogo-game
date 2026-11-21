@@ -191,8 +191,8 @@ function step(s, masks) {
 
 // ── 봇 ──
 const BOTS = {
-  easy: { read: 0.6, err: 30, tErr: 7, swingZ: 0.68, chase: 0.42, zone: 0.5, mix: 0.4 },
-  normal: { read: 0.45, err: 20, tErr: 5, swingZ: 0.78, chase: 0.3, zone: 0.6, mix: 0.6 },
+  easy: { read: 0.68, err: 36, tErr: 8.5, swingZ: 0.62, chase: 0.48, zone: 0.56, mix: 0.3 },
+  normal: { read: 0.5, err: 24, tErr: 6, swingZ: 0.74, chase: 0.34, zone: 0.62, mix: 0.5 },
   hard: { read: 0.32, err: 12, tErr: 3.5, swingZ: 0.85, chase: 0.2, zone: 0.66, mix: 0.75 },
 };
 

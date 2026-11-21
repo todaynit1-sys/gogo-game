@@ -136,13 +136,14 @@ function build(touch) {
   scene.add(ball);
   const blobG = new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2), blobM = () => new THREE.MeshBasicMaterial({ color: 0x241a3a, transparent: true, opacity: 0.35, depthWrite: false });
   const ballBlob = new THREE.Mesh(blobG, blobM()); ballBlob.position.y = 0.045; scene.add(ballBlob);
+  const mark = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.44, 30).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe45c, transparent: true, opacity: 0.9, depthWrite: false })); mark.position.y = 0.06; mark.visible = false; scene.add(mark);
   const trail = [];
   for (let i = 0; i < 7; i++) { const t = new THREE.Mesh(ball.geometry, new THREE.MeshBasicMaterial({ color: 0xf4ff9a, transparent: true, opacity: 0.32 - i * 0.04, depthWrite: false })); t.scale.setScalar(0.85 - i * 0.09); scene.add(t); trail.push(t); }
   const sparkTex = canvasTex(64, 64, (c) => { c.strokeStyle = "#fff"; c.lineWidth = 7; c.beginPath(); c.arc(32, 32, 24, 0, 7); c.stroke(); });
   const sparks = [];
   for (let i = 0; i < 4; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xfff2b0 })); s.visible = false; scene.add(s); sparks.push({ s, t: 9 }); }
 
-  return { renderer, scene, cam, sun, ball, ballBlob, trail, hist: [], sparks, fans, blobG, blobM, chars: [null, null], keys: ["", ""], camX: 0, mem: { hc: -1, qc: -1 }, lastT: 0 };
+  return { renderer, scene, cam, sun, ball, ballBlob, mark, trail, hist: [], sparks, fans, blobG, blobM, chars: [null, null], keys: ["", ""], camX: 0, mem: { hc: -1, qc: -1 }, lastT: 0 };
 }
 
 // 떡 선수: 앞(+z)을 보는 모양으로 만들고 통째로 돌린다
@@ -201,6 +202,8 @@ export function render(v, env) {
   R.ball.position.set(b.x, b.y + 0.04, b.z);
   R.ballBlob.position.x = b.x; R.ballBlob.position.z = b.z;
   const bs = 0.2 + Math.min(0.22, b.y * 0.05); R.ballBlob.scale.set(bs, 1, bs); R.ballBlob.material.opacity = Math.max(0.12, 0.42 - b.y * 0.07);
+  R.mark.visible = !!v.lm;
+  if (v.lm) { R.mark.position.x = v.lm[0]; R.mark.position.z = v.lm[1]; const k = 1 + Math.sin(t * 10) * 0.12; R.mark.scale.set(k, 1, k); R.mark.material.color.set(v.lm[1] * side > 0 ? 0xffe45c : 0xffffff); R.mark.material.opacity = v.lm[1] * side > 0 ? 0.95 : 0.45; }
   R.hist.unshift([b.x, b.y + 0.04, b.z]); if (R.hist.length > 16) R.hist.length = 16;
   const fast = v.ph === 1 && Math.hypot(b.vx, b.vz) > 9;
   R.trail.forEach((m, i) => { const h = R.hist[(i + 1) * 2]; m.visible = !!(fast && h); if (h) m.position.set(h[0], h[1], h[2]); });

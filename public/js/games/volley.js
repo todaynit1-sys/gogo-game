@@ -15,7 +15,7 @@ const WIN_SCORE = 7, SKY = -900;
 
 const L = 1, R = 2, U = 4, A = 8, D = 16;
 const HOME = { 2: [240, 720], 4: [310, 650, 130, 830] };
-const SKILL = { easy: 0.38, normal: 0.6, hard: 0.95 };
+const SKILL = { easy: 0.3, normal: 0.48, hard: 0.93 };
 const COURTS = [
   { name: "해변", sky: ["#6ec6ff", "#e4f6ff"], sun: "#fff3b0", cloud: "rgba(255,255,255,.9)", hill: ["#a8e0a0", "#8fd18a"], floor: "#f6dca6", edge: "#e9c887" },
   { name: "노을", sky: ["#ff9a76", "#ffe3b0"], sun: "#fff0c2", cloud: "rgba(255,236,214,.8)", hill: ["#e9a36b", "#d98a5a"], floor: "#f3c98b", edge: "#dba866" },

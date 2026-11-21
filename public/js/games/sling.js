@@ -188,7 +188,7 @@ function step(s, masks, aims) {
 }
 
 // ── 봇: 여러 번 쏴 보고 점수가 잘 나오는 조준을 고른다 ──
-const TRIES = { easy: 10, normal: 36, hard: 90 };
+const TRIES = { easy: 6, normal: 24, hard: 90 };
 
 function tryShot(s, ax, ay, sh) {
   const c = { g: s.g, p: [{ sc: 0, sh }], turn: 0, shot: null, pop: [], ph: 1, tm: 0, fc: 0, hc: 0, tc: 0 };

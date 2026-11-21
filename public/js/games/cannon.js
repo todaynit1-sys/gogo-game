@@ -227,7 +227,7 @@ function unpack(o) {
 }
 
 // ── 봇 ──
-const ERR = { easy: 15, normal: 6.5, hard: 1.6 };
+const ERR = { easy: 19, normal: 8.5, hard: 1.6 };
 
 function simShot(s, x, y, vx, vy) {
   for (let k = 0; k < 700; k++) {

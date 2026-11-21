@@ -208,7 +208,7 @@ function drawNext(ctx, b, x, y, cell) {
 }
 
 // ── 봇 ──
-const BOT = { easy: { d: 0.36, noise: 16 }, normal: { d: 0.2, noise: 4 }, hard: { d: 0.09, noise: 0.4 } };
+const BOT = { easy: { d: 0.46, noise: 20 }, normal: { d: 0.25, noise: 6 }, hard: { d: 0.09, noise: 0.4 } };
 
 function plan(b, noise) {
   const p = b.cur; let best = null;

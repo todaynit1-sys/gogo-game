@@ -187,7 +187,7 @@ function adopt(v) {
 }
 
 // ── 봇 ──
-const BOTS = { easy: { aggr: 0.3, see: 0.9 }, normal: { aggr: 0.6, see: 0.975 }, hard: { aggr: 0.95, see: 1 } };
+const BOTS = { easy: { aggr: 0.3, see: 0.8 }, normal: { aggr: 0.6, see: 0.92 }, hard: { aggr: 0.95, see: 1 } };
 
 function blastCells(s, x, y, r, out, pc) {
   out.add(idx(x, y));

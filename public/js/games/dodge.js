@@ -160,8 +160,8 @@ function step(s, masks, aims) {
 
 // ── 봇 ──
 const BOTS = {
-  easy: { lag: 14, err: 0.22, catchP: 0.08, dodge: 0.35, hold: [55, 120] },
-  normal: { lag: 7, err: 0.1, catchP: 0.28, dodge: 0.7, hold: [30, 85] },
+  easy: { lag: 18, err: 0.3, catchP: 0.04, dodge: 0.25, hold: [70, 140] },
+  normal: { lag: 9, err: 0.15, catchP: 0.18, dodge: 0.55, hold: [40, 100] },
   hard: { lag: 2, err: 0.035, catchP: 0.5, dodge: 0.92, hold: [18, 55] },
 };
 
