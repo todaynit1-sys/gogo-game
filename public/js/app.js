@@ -14,7 +14,7 @@ let muted = store.get("hp_muted") === "1";
 let musicOn = store.get("hp_music") !== "0";
 const ui = sound(() => muted);      // 화면 단추 소리
 // 게임마다 어울리는 배경음악
-const THEME = { baseball: "sport", volley: "sport", soccer: "sport", dodge: "sport", bomb: "tense", land: "tense", blocks: "puzzle", chain: "puzzle", cannon: "chill", sling: "chill", pool: "chill", alkkagi: "chill", yut: "yut" };
+const THEME = { baseball: "sport", volley: "sport", soccer: "sport", dodge: "sport", bomb: "tense", land: "tense", blocks: "puzzle", chain: "puzzle", cannon: "chill", sling: "chill", pool: "chill", alkkagi: "chill", bowling: "chill", yut: "yut" };
 let look = store.get("hp_look") ? parseLook(store.get("hp_look")) : randomLook();
 let current = GAMES[0];   // 고른 게임
 let ws = null, room = null, game = null, pingTimer = null, leaving = false;
@@ -23,7 +23,7 @@ let soloMode = 0;         // 혼자·한 키보드에서 고른 경기 방식(�
 let gameId = null, sawLobby = false, overPending = false;
 
 // 게임 모듈은 고를 때 불러온다
-const VER = "?v=19";
+const VER = "?v=20";
 const mods = {};
 const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" + VER));
 
@@ -161,18 +161,34 @@ const THUMBS = {
   pool: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#f6e6c6"/><rect x="14" y="20" width="292" height="140" rx="20" fill="#8a5a3c"/><rect x="30" y="36" width="260" height="108" rx="6" fill="#2f8f5b"/><g fill="#15122a"><circle cx="32" cy="38" r="9"/><circle cx="160" cy="34" r="8"/><circle cx="288" cy="38" r="9"/><circle cx="32" cy="142" r="9"/><circle cx="160" cy="146" r="8"/><circle cx="288" cy="142" r="9"/></g><g stroke="#2a2440" stroke-width="2"><circle cx="210" cy="90" r="9" fill="#ffc93c"/><circle cx="226" cy="81" r="9" fill="#3d6fd6"/><circle cx="226" cy="99" r="9" fill="#e8453c"/><circle cx="242" cy="72" r="9" fill="#2f9e5a"/><circle cx="242" cy="90" r="9" fill="#fffdf6"/><circle cx="242" cy="108" r="9" fill="#8a55d6"/><circle cx="96" cy="90" r="10" fill="#fffdf6"/></g><path d="M84 90H20" stroke="#e9c887" stroke-width="6" stroke-linecap="round"/></svg>`,
   yut: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#f7ecd4"/><rect x="24" y="16" width="148" height="148" rx="12" fill="#fffaf0" stroke="#8a5a3c" stroke-width="5"/><g fill="none" stroke="#c79a63" stroke-width="3"><rect x="40" y="32" width="116" height="116"/><path d="M156 32L40 148M40 32l116 116"/></g><g fill="#fff" stroke="#8a5a3c" stroke-width="2.5"><circle cx="156" cy="148" r="9" fill="#ffe3a3"/><circle cx="156" cy="32" r="9" fill="#ffe3a3"/><circle cx="40" cy="32" r="9" fill="#ffe3a3"/><circle cx="40" cy="148" r="9" fill="#ffe3a3"/><circle cx="98" cy="90" r="9" fill="#ffe3a3"/></g><circle cx="156" cy="101" r="11" fill="#ff9db5" stroke="#2b2d6e" stroke-width="3"/><circle cx="64" cy="56" r="11" fill="#8ecbff" stroke="#2b2d6e" stroke-width="3"/><g stroke="#8a5a3c" stroke-width="3"><rect x="196" y="40" width="20" height="96" rx="10" fill="#f6dca6" transform="rotate(-12 206 88)"/><rect x="226" y="36" width="20" height="96" rx="10" fill="#c98a4a" transform="rotate(6 236 84)"/><rect x="256" y="44" width="20" height="96" rx="10" fill="#f6dca6" transform="rotate(-4 266 92)"/><rect x="284" y="40" width="20" height="96" rx="10" fill="#f6dca6" transform="rotate(14 294 88)"/></g></svg>`,
   baseball: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#7cc9ff"/><rect y="40" width="320" height="34" fill="#3d4a8a"/><g fill="#ffc93c"><circle cx="20" cy="50" r="4"/><circle cx="60" cy="58" r="4"/><circle cx="100" cy="50" r="4"/><circle cx="220" cy="56" r="4"/><circle cx="270" cy="50" r="4"/></g><rect y="74" width="320" height="106" fill="#5dbb63"/><path d="M160 80L280 140L160 200L40 140Z" fill="#d9a46a"/><path d="M160 104L230 140L160 176L90 140Z" fill="#5dbb63"/><circle cx="160" cy="98" r="11" fill="#ffd66b" stroke="#2b2d6e" stroke-width="3"/><g stroke="#2b2d6e" stroke-width="3"><rect x="138" y="118" width="44" height="40" rx="2" fill="none" stroke="#fff" stroke-dasharray="5 4"/><circle cx="96" cy="150" r="18" fill="#ff9db5"/></g><rect x="104" y="112" width="58" height="9" rx="4.5" fill="#c98a4a" stroke="#8a5a3c" stroke-width="2.5" transform="rotate(-30 110 140)"/><circle cx="166" cy="128" r="7" fill="#fff" stroke="#e8453c" stroke-width="2"/></svg>`,
+  bowling: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#fff1cc"/><path d="M0 180L110 40h100L320 180Z" fill="#f0c684"/><path d="M0 180L110 40M320 180L210 40" stroke="#5a3a2a" stroke-width="7"/><g fill="#fffdf6" stroke="#2b2d6e" stroke-width="3.5"><ellipse cx="136" cy="58" rx="9" ry="15"/><ellipse cx="160" cy="58" rx="9" ry="15"/><ellipse cx="184" cy="58" rx="9" ry="15"/><ellipse cx="147" cy="74" rx="10" ry="17"/><ellipse cx="173" cy="74" rx="10" ry="17"/><ellipse cx="160" cy="92" rx="11" ry="19"/></g><g fill="none" stroke="#ff5d73" stroke-width="3.5"><path d="M152 84h16M139 67h16M165 67h16"/></g><circle cx="118" cy="142" r="27" fill="#ff9db5" stroke="#2b2d6e" stroke-width="4"/><circle cx="109" cy="137" r="4.5" fill="#2b2d6e"/><circle cx="127" cy="137" r="4.5" fill="#2b2d6e"/><path d="M70 150h-22M76 162h-16" stroke="#2b2d6e" stroke-width="4" stroke-linecap="round"/></svg>`,
   land: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#d9f2d2"/><g stroke="#2b2d6e" stroke-width="4"><path d="M30 30h110v70H80v50H30z" fill="#ff9db5"/><path d="M200 60h90v90h-60v-40h-30z" fill="#8ecbff"/><path d="M140 66h40v54" fill="none" stroke-dasharray="8 7"/><rect x="170" y="112" width="20" height="20" fill="#ff5d73"/></g></svg>`,
 };
 
+let gameFilter = "all";
+const FILTERS = [["all", "전체"], ["rt", "실시간 대전"], ["turn", "차례대로"], ["won", "이겨 본 게임"]];
+function renderFilters() {
+  const box = $("gameFilter"); box.innerHTML = "";
+  for (const [k, t] of FILTERS) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = t; b.setAttribute("aria-pressed", String(k === gameFilter));
+    b.addEventListener("click", () => { gameFilter = k; renderFilters(); renderCards(); });
+    box.append(b);
+  }
+}
 function renderCards() {
   const box = $("cards"); box.innerHTML = "";
-  for (const g of GAMES) {
+  const recs = loadRec();
+  const list = GAMES.filter((g) => gameFilter === "all" || (gameFilter === "won" ? recs[g.id] && recs[g.id].w : g.kind === gameFilter));
+  if (!list.length) { const p = document.createElement("p"); p.className = "hint"; p.textContent = "아직 이긴 게임이 없어요. 한 판 이기고 오면 여기에 모여요."; box.append(p); }
+  for (const g of list) {
     const b = document.createElement("button");
     b.type = "button"; b.className = "card"; b.disabled = !g.ready;
     b.innerHTML = `<span class="thumb">${THUMBS[g.id] || ""}</span><span class="card-body"><h3></h3><span class="tag"></span><p></p></span>`;
     const h = b.querySelector("h3"); h.textContent = g.name;
     if (!g.ready) { const s = document.createElement("span"); s.className = "soon"; s.textContent = "준비 중"; h.append(s); }
     b.querySelector(".tag").textContent = g.tag;
+    if (g.id === "bowling") { const s = document.createElement("span"); s.className = "newb"; s.textContent = "새 게임"; h.append(s); }
     const rec = loadRec()[g.id];
     if (rec && rec.w) { const w = document.createElement("span"); w.className = "wins"; w.textContent = `이긴 판 ${rec.w}`; h.append(w); }
     b.querySelector("p").textContent = g.desc;
@@ -528,7 +544,9 @@ function init() {
   document.addEventListener("fullscreenchange", () => { $("fsBtn").textContent = document.fullscreenElement ? "원래 화면" : "전체 화면"; });
   document.title = SITE.name + " — 가입 없이 친구랑 바로 한 판";
   $("nick").value = store.get("hp_name") || "";
-  renderCards();
+  renderFilters(); renderCards();
+  $("randGame").addEventListener("click", () => { const r = GAMES.filter((g) => g.ready); openGame(r[(Math.random() * r.length) | 0]); });
+  $("closetToggle").addEventListener("click", (e) => { const on = $("closet").classList.toggle("open"); e.currentTarget.setAttribute("aria-expanded", String(on)); e.currentTarget.textContent = on ? "캐릭터 꾸미기 닫기" : "캐릭터 꾸미기 열기"; });
   renderCloset();
   store.set("hp_look", lookStr(look));
   $("randLook").addEventListener("click", () => { look = randomLook(); saveLook(); });

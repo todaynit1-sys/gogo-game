@@ -10,12 +10,12 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="한판 오락실">
 <meta property="og:title" content="한판 오락실 — 가입 없이 친구랑 바로 한 판">
-<meta property="og:description" content="배구·야구·축구·포격전·윷놀이 등 13가지 게임을 설치도 가입도 없이, 링크 하나로 2~4명이 바로 즐겨요.">
+<meta property="og:description" content="배구·야구·축구·포격전·윷놀이 등 14가지 게임을 설치도 가입도 없이, 링크 하나로 2~4명이 바로 즐겨요.">
 <meta property="og:url" content="https://gogo-game.vercel.app/">
 <meta property="og:image" content="https://gogo-game.vercel.app/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="한판 오락실 — 떡 친구들과 13가지 게임">
+<meta property="og:image:alt" content="한판 오락실 — 떡 친구들과 14가지 게임">
 <meta property="og:locale" content="ko_KR">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="/icon.png">
@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=8">
+<link rel="stylesheet" href="/css/app.css?v=9">
 </head>
 <body>
 <header class="top">
@@ -50,18 +50,25 @@
           <input id="nick" maxlength="10" autocomplete="off" placeholder="비워 두면 자동으로 지어 드려요">
         </div>
       </div>
-      <div class="closet">
+      <div class="closet" id="closet">
         <h1>내 방</h1>
         <p class="lead">캐릭터를 꾸미고 아래에서 게임을 골라 들어가세요. 혼자 놀아도, 친구를 불러도 좋아요.</p>
+        <button class="btn btn-line closet-toggle" id="closetToggle" type="button" aria-expanded="false">캐릭터 꾸미기 열기</button>
+        <div class="closet-body">
         <div class="pick"><span class="optlabel">색</span><div class="swatches" id="pickColor"></div></div>
         <div class="pick"><span class="optlabel">표정</span><div class="chips" id="pickFace"></div></div>
         <div class="pick"><span class="optlabel">머리</span><div class="chips" id="pickHat"></div></div>
         <div class="pick"><span class="optlabel">무늬</span><div class="chips" id="pickPattern"></div></div>
         <div class="pick"><span class="optlabel">얼굴</span><div class="chips" id="pickAcc"></div></div>
         <button class="btn btn-line" id="randLook" type="button">아무거나 골라줘</button>
+        </div>
       </div>
     </div>
-    <h2 class="sec">게임 고르기</h2>
+    <div class="sechead">
+      <h2 class="sec">게임 고르기</h2>
+      <div class="seg" id="gameFilter"></div>
+      <button class="btn btn-coral" id="randGame" type="button">아무 게임이나 한 판</button>
+    </div>
     <div class="cards" id="cards"></div>
     <form class="joinbox" id="joinForm">
       <label for="joinCode">친구에게 방 코드를 받았다면</label>
@@ -190,6 +197,6 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script type="module" src="/js/app.js?v=22"></script>
+<script type="module" src="/js/app.js?v=23"></script>
 </body>
 </html>

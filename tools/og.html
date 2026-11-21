@@ -88,7 +88,7 @@ async function drawOg() {
   ctx.fillStyle = NAVY; ctx.fillText("한판 오락실", tx, ty);
   ctx.font = "46px Jua"; ctx.fillStyle = NAVY; ctx.fillText("가입 없이, 친구랑 바로 한 판!", 70, 382);
   let cx = 70;
-  cx += chip(cx, 426, "13가지 게임", YELLOW, NAVY) + 14;
+  cx += chip(cx, 426, "14가지 게임", YELLOW, NAVY) + 14;
   cx += chip(cx, 426, "2~4명 함께", CORAL, "#fff") + 14;
   chip(70, 500, "설치·가입 없음", PAPER, NAVY);
   ctx.textBaseline = "alphabetic"; ctx.font = "26px Jua"; ctx.fillStyle = "#6b6480"; ctx.fillText("gogo-game.vercel.app", 72, 602);
@@ -101,7 +101,7 @@ function drawIcon() {
 }
 
 // 한글 웹 글꼴은 글자 묶음별로 나눠 받으므로, 그림에 쓰는 글자를 모두 미리 받아 둔다
-const TEXT = "온라인 오락실 한판 가입 없이, 친구랑 바로 한 판! 13가지 게임 2~4명 함께 설치·가입 없음 gogo-game.vercel.app";
+const TEXT = "온라인 오락실 한판 가입 없이, 친구랑 바로 한 판! 14가지 게임 2~4명 함께 설치·가입 없음 gogo-game.vercel.app";
 await document.fonts.load("132px Jua", TEXT);
 await document.fonts.ready;
 if (icon) drawIcon(); else await drawOg();

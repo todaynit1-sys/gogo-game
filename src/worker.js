@@ -5,7 +5,7 @@
 import { DurableObject } from "cloudflare:workers";
 
 const MAX_PLAYERS = 4;
-const GAMES = ["volley", "bomb", "land", "blocks", "chain", "cannon", "soccer", "sling", "alkkagi", "dodge", "pool", "yut", "baseball"];
+const GAMES = ["volley", "bomb", "land", "blocks", "chain", "cannon", "soccer", "sling", "alkkagi", "dodge", "pool", "yut", "baseball", "bowling"];
 const CODE_RE = /^[A-Z]{4}$/;
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // 헷갈리는 I, O 제외
 

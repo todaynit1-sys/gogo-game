@@ -8,11 +8,11 @@ import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, BOT_NAMES, SEAT_D
 const W = 960, H = 540, GROUND = 470, NET_X = 480, NET_HW = 7, NET_TOP = GROUND - 165;
 const PR = 40, BR = 24, DT = 1 / 60;
 const MOVE = 400, JUMP = 930, PG = 2300, BG = 1250;
-const WIN_SCORE = 7;
+const WIN_SCORE = 7, SKY = -900;
 
 const L = 1, R = 2, U = 4, A = 8, D = 16;
 const HOME = { 2: [240, 720], 4: [310, 650, 130, 830] };
-const SKILL = { easy: 0.45, normal: 0.7, hard: 0.93 };
+const SKILL = { easy: 0.38, normal: 0.68, hard: 0.93 };
 const COURTS = [
   { name: "해변", sky: ["#6ec6ff", "#e4f6ff"], sun: "#fff3b0", cloud: "rgba(255,255,255,.9)", hill: ["#a8e0a0", "#8fd18a"], floor: "#f6dca6", edge: "#e9c887" },
   { name: "노을", sky: ["#ff9a76", "#ffe3b0"], sun: "#fff0c2", cloud: "rgba(255,236,214,.8)", hill: ["#e9a36b", "#d98a5a"], floor: "#f3c98b", edge: "#dba866" },
@@ -97,7 +97,7 @@ function step(s, masks) {
   b.x += b.vx * DT; b.y += b.vy * DT;
   if (b.x < BR) { b.x = BR; b.vx = Math.abs(b.vx) * 0.9; }
   if (b.x > W - BR) { b.x = W - BR; b.vx = -Math.abs(b.vx) * 0.9; }
-  if (b.y < BR) { b.y = BR; b.vy = Math.abs(b.vy) * 0.9; }
+  if (b.y < SKY) { b.y = SKY; b.vy = Math.abs(b.vy) * 0.5; }      // 천장 없음: 하늘 높이 떴다가 그대로 떨어진다
 
   // 네트 (사각형과 원 충돌)
   const cx = Math.max(NET_X - NET_HW, Math.min(b.x, NET_X + NET_HW));
@@ -449,7 +449,14 @@ export function start(opts) {
     // 공
     const b = s.b, sp = Math.hypot(b.vx, b.vy);
     if (sp > 800) trail.forEach((q, i) => { ctx.fillStyle = `rgba(255,120,80,${i * 0.045})`; ctx.beginPath(); ctx.arc(q.x, q.y, BR * (0.5 + i * 0.07), 0, 7); ctx.fill(); });
-    ctx.fillStyle = "rgba(80,50,20,.16)"; ctx.beginPath(); ctx.ellipse(b.x, GROUND + 4, BR * (1 - (GROUND - b.y) / 900), 5, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "rgba(80,50,20,.16)"; ctx.beginPath(); ctx.ellipse(b.x, GROUND + 4, BR * Math.max(0.35, 1 - (GROUND - b.y) / 900), 5, 0, 0, 7); ctx.fill();
+    if (b.y < -BR) {      // 화면 위로 나간 공: 어디로 떨어질지 화살표로 알려 준다
+      const up = Math.min(1, (-b.y - BR) / 500), r = 15 - up * 6, mx = Math.max(26, Math.min(W - 26, b.x));
+      ctx.fillStyle = "#ff5d73"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(mx, 8); ctx.lineTo(mx - 13, 26); ctx.lineTo(mx + 13, 26); ctx.closePath(); ctx.stroke(); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.strokeStyle = "#3d6fd6"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(mx, 46, r, 0, 7); ctx.fill(); ctx.stroke();
+    }
     ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(s.tick * 0.02 + b.x * 0.02);
     ctx.fillStyle = "#fff"; ctx.strokeStyle = "#3d6fd6"; ctx.lineWidth = 3.5;
     ctx.beginPath(); ctx.arc(0, 0, BR, 0, 7); ctx.fill(); ctx.stroke();

@@ -73,7 +73,13 @@ input[type="text"], input:not([type]) { width: 100%; min-height: 44px; border: 2
 .btn-line { background: #fff; color: var(--navy); }
 .btn-big { font-size: 24px; padding: 14px 30px; min-height: 60px; width: 100%; max-width: 360px; }
 
-.sec { margin-top: 6px; }
+.sec { margin: 0; }
+.sechead { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin: 6px 0 16px; }
+.sechead .btn { margin-left: auto; }
+.sechead .seg button { font-size: 16px; padding: 6px 14px; }
+.newb { font-size: 12.5px; background: var(--coral); color: #fff; border-radius: 999px; padding: 2px 9px; }
+.closet-toggle { display: none; }
+.closet-body { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
 .card { text-align: left; background: var(--paper); border: var(--bd); border-radius: var(--r); padding: 0; overflow: hidden; box-shadow: var(--shadow); transition: transform .1s, box-shadow .1s; display: flex; flex-direction: column; }
 .card:not(:disabled):hover { transform: translate(-2px, -3px); box-shadow: 8px 9px 0 var(--navy); }
@@ -171,6 +177,13 @@ input[type="text"], input:not([type]) { width: 100%; min-height: 44px; border: 2
 
 @media (max-width: 720px) {
   .myroom { grid-template-columns: 1fr; gap: 18px; }
+  .closet-toggle { display: inline-flex; }
+  .closet:not(.open) .closet-body { display: none; }
+  .closet .lead { display: none; }
+  .sechead .seg { order: 3; width: 100%; overflow-x: auto; }
+  .sechead .seg button { flex: 1 0 auto; white-space: nowrap; }
+  .cards { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .card-body p { display: none; }
   .stagebox { max-width: 420px; }
   .gamehead { flex-direction: column; align-items: flex-start; }
   .thumb.big { width: 100%; max-width: 320px; }
