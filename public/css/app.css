@@ -244,3 +244,10 @@ input[type="text"], input:not([type]) { width: 100%; min-height: 44px; border: 2
   .rotate-tip:not([hidden]) { position: fixed; top: 6px; left: 50%; transform: translateX(-50%); z-index: 6; margin: 0; max-width: 92vw; }
 }
 @media (prefers-reduced-motion: reduce) { .btn, .card { transition: none; } .bubble { animation: none; } }
+
+/* 버튼이 7개 이상인 게임(블록 대전)은 휴대폰 세로 화면에서 버튼을 조금 작게 */
+@media (pointer: coarse) and (orientation: portrait) {
+  .touch:has(.tbtn:nth-child(4)) { gap: 6px; }
+  .touch:has(.tgroup .tbtn:nth-child(4)) .tbtn { width: clamp(42px, 11.6vw, 64px); height: clamp(42px, 11.6vw, 64px); font-size: clamp(12px, 3.4vw, 17px); }
+  .touch:has(.tgroup .tbtn:nth-child(4)) .tgroup { gap: 6px; }
+}

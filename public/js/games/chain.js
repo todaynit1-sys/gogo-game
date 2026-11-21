@@ -1,7 +1,7 @@
 // 연쇄 팡 — 색 떡 두 개가 짝으로 떨어진다. 같은 색 넷을 이으면 터지고,
 // 터진 뒤 떨어진 떡이 또 터지면(연쇄) 상대에게 돌떡이 쏟아진다.
 
-import { startVersus } from "./versus.js?v=3";
+import { startVersus } from "./versus.js?v=4";
 import { label } from "./kit.js?v=3";
 
 const COLS = 7, ROWS = 12, HID = 2, TR = ROWS + HID, SPAWN_X = 3;

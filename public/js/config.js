@@ -31,6 +31,6 @@ export const GAMES = [
   { id: "pool", kind: "turn", name: "미니 당구", tag: "1~4명 · 번갈아 치기", desc: "흰 공을 끌어 쳐서 색 공을 구멍에 쏙. 넣으면 한 번 더!", ready: true },
   { id: "yut", kind: "turn", name: "윷놀이", tag: "2~4명 · 번갈아 던지기", desc: "도·개·걸·윷·모! 잡고 업고 지름길로, 말을 먼저 다 내보내면 승리.", ready: true },
   { id: "alkkagi", kind: "turn", name: "알까기", tag: "2~4명 · 번갈아 튕기기", desc: "내 알을 튕겨 상대 알을 판 밖으로! 온라인에서도 끊김 없는 차례제.", ready: true },
-  { id: "blocks", kind: "rt", name: "블록 대전", tag: "2~4명", desc: "줄을 지워 상대에게 방해 줄을 보내는 낙하 블록 대결.", ready: true },
+  { id: "blocks", kind: "rt", name: "블록 대전", tag: "2~4명", desc: "네 칸 블록 7가지로 줄을 지워 상대에게 방해 줄을 보내는 낙하 블록 대결. 고스트·보관·T스핀까지.", ready: true },
   { id: "chain", kind: "rt", name: "연쇄 팡", tag: "2~4명", desc: "같은 색 넷을 이어 터뜨리고, 연쇄로 상대를 몰아붙이기.", ready: true },
 ];

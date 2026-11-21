@@ -61,7 +61,7 @@ export function startVersus(G, opts) {
   const kb = keyboard(new Set([...Object.keys(K_SOLO), ...Object.keys(K_P1), ...Object.keys(K_P2)]));
   const pad = touchPad(opts.touchEl, [
     [{ id: "L", label: "◀" }, { id: "D", label: "▼" }, { id: "R", label: "▶" }],
-    [...(G.hold ? [{ id: "hold", label: "보관" }] : []), { id: "rot", label: "돌리기", cls: "jump" }, { id: "drop", label: "뚝!", cls: "smash" }],
+    [...(G.hold ? [{ id: "hold", label: "보관" }] : []), ...(G.rot2 ? [{ id: "rot2", label: "반대" }] : []), { id: "rot", label: "돌리기", cls: "jump" }, { id: "drop", label: "뚝!", cls: "smash" }],
   ]);
   const held = (seat, action) => {
     for (const c of kb.down) if (seat.map[c] === action) return true;
@@ -119,7 +119,7 @@ export function startVersus(G, opts) {
           s.board.soft = held(s, "D");
           if (s.das) {
             if (!held(s, s.das.dir)) s.das = null;
-            else { s.das.t += dt; while (s.das && s.das.t > 0.2) { G.act(s.board, s.das.dir); s.das.t -= 0.045; } }
+            else { s.das.t += dt; while (s.das && s.das.t > (G.das || 0.2)) { if (!G.act(s.board, s.das.dir)) { s.das.t = G.das || 0.2; break; } s.das.t -= G.arr || 0.045; } }
           }
         } else G.bot(s.board, s.mem, level, dt);
         G.step(s.board, dt);
@@ -169,9 +169,10 @@ export function startVersus(G, opts) {
       const x = 12, y = 92;
       out.push({ s: list[0], x, y, cell, nx: x + cols * cell + 12, ny: y });
       if (n > 1) {
-        const mx = x + cols * cell + 12, availW = W - mx - 8, availH = H - (y + 150) - 10;
-        const mc = Math.max(5, Math.floor(Math.min(availW / cols, availH / ((n - 1) * (rows + 3.2)))));
-        for (let i = 1; i < n; i++) out.push({ s: list[i], x: mx, y: y + 150 + (i - 1) * (rows + 3.2) * mc + 2.4 * mc, cell: mc, mini: true });
+        const top = G.nextH ? 26 + G.nextH * cell * 0.78 : 150;      // 다음 블록·보관함 칸 아래부터 상대 판
+        const mx = x + cols * cell + 12, availW = W - mx - 8, availH = H - (y + top) - 10;
+        const mc = Math.max(4, Math.floor(Math.min(availW / cols, availH / ((n - 1) * (rows + 3.2)))));
+        for (let i = 1; i < n; i++) out.push({ s: list[i], x: mx, y: y + top + (i - 1) * (rows + 3.2) * mc + 2.4 * mc, cell: mc, mini: true });
       }
     } else if (n <= 2) {
       const cell = Math.min(38, Math.floor((H - 104) / rows));
