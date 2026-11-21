@@ -2,7 +2,7 @@
 // 2분 동안 골을 더 많이 넣은 팀이 승리(5골을 먼저 넣어도 끝).
 
 import { lazy3d } from "./lazy3d.js?v=1";
-import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=3";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle } from "./kit.js?v=3";
 

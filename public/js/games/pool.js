@@ -1,7 +1,8 @@
 // 미니 당구 — 번갈아 흰 공(내 떡)을 쳐서 색 공을 구멍에 넣는다.
 // 넣으면 한 번 더, 흰 공이 빠지면 1점 깎이고 차례가 넘어간다. 공을 다 넣었을 때 점수가 가장 높으면 승리.
 
-import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=3";
+import { lazy3d } from "./lazy3d.js?v=1";
+import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
 
@@ -216,8 +217,12 @@ function drawBall(ctx, n, x, y, look) {
   ctx.fillStyle = "rgba(255,255,255,.45)"; ctx.beginPath(); ctx.arc(x - BR * 0.4, y - BR * 0.45, BR * 0.25, 0, 7); ctx.fill();
 }
 
+const stage = lazy3d("./table3d.js?v=2");
 function draw(ctx, v, env) {
   const f = FELTS[v.th | 0] || FELTS[0];
+  const scr = ctx, m3 = stage.get();
+  let g3 = null;
+  if (m3) { try { g3 = m3.open("pool", { rect: [92, 60, 888, 478], unit: 16.8, cam: { fov: 40, y: 13.2, z: 9.6, look: 0.5 }, touch: env.touch, t: env.t }); ctx = g3.board; } catch { g3 = null; stage.fail(); } }
   ctx.fillStyle = "#f6e6c6"; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "rgba(43,45,110,.06)";
   for (let y = 12; y < H; y += 26) for (let x = 12 + ((y / 26) % 2) * 13; x < W; x += 26) { ctx.beginPath(); ctx.arc(x, y, 1.6, 0, 7); ctx.fill(); }
@@ -260,8 +265,10 @@ function draw(ctx, v, env) {
   for (const b of v.bs) {
     if (b.in) continue;
     const q = env.prev && env.prev.bs.find((o) => o.n === b.n), x = q ? q.x + (b.x - q.x) * env.alpha : b.x, y = q ? q.y + (b.y - q.y) * env.alpha : b.y;
-    drawBall(ctx, b.n, x, y, look);
+    if (g3) { try { if (b.n === 0) g3.mochi("cue", { ...look, hex: "fffdf6" }, x, y, { r: BR + 1 }); else g3.ball(b.n, x, y, { r: BR, color: COL[b.n], stripe: b.n === 9 ? COL[9] : null, label: b.n }); } catch { stage.fail(); } }
+    else drawBall(ctx, b.n, x, y, look);
   }
+  if (g3) { ctx = scr; try { g3.cheer = !!v.over; ctx.drawImage(g3.close(), 0, 0, W, H); } catch { stage.fail(); } }
   // 점수 카드
   const n = v.seats.length, cw = Math.min(230, 900 / n), x0 = (W - cw * n) / 2;
   v.seats.forEach((seat, i) => {
@@ -308,7 +315,8 @@ const G = {
   W, H, sendEvery: 2, action: null, overDelay: 220, pointer: true, noPad: true,
   bots: { solo: 1, local: 0 },
   fill: (mode, n) => (n < 2 ? 1 : 0),
-  init, step, bot, draw, fx, title,
+  init, step, bot, draw, fx, title, dispose: () => stage.dispose(),
+  mapPointer: (x, y) => { const m = stage.get(); return m ? m.pick(x, y) : [x, y]; },
 };
 
 export const meta = {

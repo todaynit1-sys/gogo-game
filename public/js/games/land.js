@@ -2,7 +2,8 @@
 // 선을 긋는 동안 누가 그 선을 밟으면 탈락하고, 그 땅은 밟은 사람 것이 된다. 90초 뒤 땅이 가장 넓은 사람이 승리.
 // 판마다 바위 배치가 다르고, 아이템(방패·깃발·얼음)이 나온다.
 
-import { startHostGame, L, R, U, D } from "./hostgame.js?v=3";
+import { lazy3d } from "./lazy3d.js?v=1";
+import { startHostGame, L, R, U, D } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=3";
 
@@ -243,8 +244,12 @@ function drawItem(ctx, it, t) {
   else { for (let k = 0; k < 3; k++) { const a = (k / 3) * Math.PI; ctx.beginPath(); ctx.moveTo(x - Math.cos(a) * 8, y - Math.sin(a) * 8); ctx.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8); ctx.stroke(); } }
 }
 
+const stage = lazy3d("./table3d.js?v=2");
 function draw(ctx, v, env) {
   const th = THEMES[v.th | 0] || THEMES[0];
+  const scr = ctx, m3 = stage.get();
+  let g3 = null;
+  if (m3) { try { g3 = m3.open("land" + (v.th | 0), { rect: [0, 0, W, H], unit: 18.6, sky: th.dark ? "night" : "dusk", frame: 0x2b2d6e, cam: { fov: 40, y: 13.6, z: 11.2, look: 0.6 }, touch: env.touch, t: env.t }); ctx = g3.board; } catch { g3 = null; stage.fail(); } }
   ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = th.stripe;
   for (let x = 0; x < GW; x += 2) ctx.fillRect(x * CELL, 0, CELL, H);
@@ -271,6 +276,26 @@ function draw(ctx, v, env) {
   for (const it of v.it) drawItem(ctx, it, env.t);
   // 선수
   const a = env.host ? (v.tick % MOVE_EVERY) / MOVE_EVERY : env.alpha;
+  if (g3) {
+    ctx = scr;
+    try {
+      for (let k = 0; k < N; k++) if (v.rk[k]) g3.block(k, ((k % GW) + 0.5) * CELL, (((k / GW) | 0) + 0.5) * CELL, { w: CELL - 2, d: CELL - 2, h: 16, color: th.rock[1] });
+      v.p.forEach((p, i) => {
+        const x = (p.px + (p.x - p.px) * a + 0.5) * CELL, y = (p.py + (p.y - p.py) * a + 0.5) * CELL;
+        g3.mochi(i, parseLook(v.seats[i].look, i), x, y, { r: 15, ring: SEAT_DARK[i], show: !!p.al });
+      });
+      g3.cheer = !!v.over;
+      ctx.drawImage(g3.close(), 0, 0, W, H);
+      v.p.forEach((p, i) => {
+        if (!p.al) return;
+        const [x, y] = g3.at((p.px + (p.x - p.px) * a + 0.5) * CELL, (p.py + (p.y - p.py) * a + 0.5) * CELL, 44), [cx2, cy2] = g3.at((p.px + (p.x - p.px) * a + 0.5) * CELL, (p.py + (p.y - p.py) * a + 0.5) * CELL, 16);
+        if (p.sh > 0 && (p.sh > 90 || v.tick % 10 < 6)) { ctx.strokeStyle = "rgba(110,198,255,.95)"; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(cx2, cy2, 22, 0, 7); ctx.stroke(); }
+        if (p.fz > 0) { ctx.fillStyle = "rgba(150,230,255,.55)"; ctx.beginPath(); ctx.arc(cx2, cy2, 20, 0, 7); ctx.fill(); }
+        if (i === env.me) { ctx.fillStyle = "#ffd66b"; ctx.strokeStyle = "#2b2d6e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 7, y - 10); ctx.lineTo(x + 7, y - 10); ctx.lineTo(x, y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        else label(ctx, v.seats[i].name, x, y, 12, "#fff", "rgba(43,45,110,.85)");
+      });
+    } catch { stage.fail(); }
+  } else
   v.p.forEach((p, i) => {
     if (!p.al) return;
     const x = (p.px + (p.x - p.px) * a + 0.5) * CELL, y = (p.py + (p.y - p.py) * a + 0.5) * CELL;
@@ -292,7 +317,7 @@ function draw(ctx, v, env) {
   const sec = Math.max(0, Math.ceil(v.time / 60));
   ctx.fillStyle = "#2b2d6e"; rr(ctx, W / 2 - 38, 4, 76, 38, 12); ctx.fill();
   label(ctx, String(sec), W / 2, 32, 24, sec <= 10 ? "#ff8fa3" : "#fff", null);
-  label(ctx, `${MAPS[v.map | 0]} · ${th.name}`, W - 10, H - 10, 14, th.dark ? "#fff" : "#2b2d6e", th.dark ? null : "rgba(255,255,255,.8)", "right");
+  label(ctx, `${MAPS[v.map | 0]} · ${th.name}`, W - 10, H - 10, 14, g3 || th.dark ? "#fff" : "#2b2d6e", g3 ? "rgba(43,45,110,.8)" : th.dark ? null : "rgba(255,255,255,.8)", "right");
   if (v.tick < START) label(ctx, "준비!", W / 2, H / 2, 80, "#ff5d73", "#fff");
   const me = env.me >= 0 ? v.p[env.me] : null;
   if (me && !v.over) {
@@ -323,7 +348,7 @@ const G = {
   hurry: (v) => v.tick >= START && v.time < 600,
   bots: { solo: 3, local: 2 },
   fill: (mode, n) => (mode === 1 ? (n < 2 ? 1 : 0) : 4 - n),
-  init, step, bot, draw, fx, title, pack, unpack, adopt: (v) => v,
+  init, step, bot, draw, fx, title, dispose: () => stage.dispose(), pack, unpack, adopt: (v) => v,
 };
 
 export const meta = {

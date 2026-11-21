@@ -1,7 +1,7 @@
 // 폭탄 미로 — 미로에서 폭탄을 놓아 상자를 부수고, 끝까지 살아남으면 승리.
 
 import { lazy3d } from "./lazy3d.js?v=1";
-import { startHostGame, L, R, U, D, A } from "./hostgame.js?v=3";
+import { startHostGame, L, R, U, D, A } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=3";
 

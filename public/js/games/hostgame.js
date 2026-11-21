@@ -40,7 +40,8 @@ export function startHostGame(G, opts) {
   const remoteAim = [null, null, null, null];
   const toLogical = (e) => {
     const r = canvas.getBoundingClientRect(), sc = Math.min(r.width / G.W, r.height / G.H) || 1;
-    return [(e.clientX - r.left - (r.width - G.W * sc) / 2) / sc, (e.clientY - r.top - (r.height - G.H * sc) / 2) / sc];
+    const lx = (e.clientX - r.left - (r.width - G.W * sc) / 2) / sc, ly = (e.clientY - r.top - (r.height - G.H * sc) / 2) / sc;
+    return G.mapPointer ? G.mapPointer(lx, ly) : [lx, ly];      // 3D 화면이면 판 위의 좌표로 바꾼다
   };
   const pd = (e) => { if (!G.pointer) return; e.preventDefault(); const [x, y] = toLogical(e); drag.on = true; drag.sx = x; drag.sy = y; drag.x = 0; drag.y = 0; try { canvas.setPointerCapture(e.pointerId); } catch {} };
   const pm = (e) => { if (!drag.on) return; const [x, y] = toLogical(e); drag.x = Math.round(drag.sx - x); drag.y = Math.round(drag.sy - y); };

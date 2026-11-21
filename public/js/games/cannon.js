@@ -1,14 +1,14 @@
 // 쾅쾅 포격전 — 번갈아 가며 각도와 힘을 맞춰 포탄을 쏜다. 땅이 파이고, 바람이 분다.
 // 포탄 다섯 가지, 판마다 다른 지형과 하늘. 마지막까지 버틴 사람이 승리.
 
-import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=3";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
 
 const W = 960, H = 540, COLW = 4, NC = 240, GRAV = 0.12, WINDK = 0.012, START = 100, TURN = 20 * 60, FUEL = 180;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ty = (s, x) => s.h[clamp(Math.round(x / COLW), 0, NC - 1)];
-const VOID_Y = H - 2, HOLE = H + 60;                       // 땅 높이가 화면 바닥에 닿으면 구멍(낭떠러지)
+const MAXHP = 170, VOID_Y = H - 2, HOLE = H + 60;                       // 땅 높이가 화면 바닥에 닿으면 구멍(낭떠러지)
 const isVoid = (s, x) => ty(s, x) >= VOID_Y;
 const speedOf = (pw) => 2.5 + pw * 0.105;
 const newWind = () => Math.round((Math.random() * 2 - 1) * 10) / 10;
@@ -54,7 +54,7 @@ function makeTerrain(kind) {
       y = 330 + wave * 0.6;
       for (const c of pits) y += 150 * Math.exp(-(((u - c) / 0.035) ** 2));
     } else y = 345 + wave;                                                                          // 완만한 언덕
-    h.push(Math.round(clamp(y, 160, 468)));
+    h.push(Math.round(clamp(y - 62, 120, 400)));      // 땅을 두껍게: 지면을 위로 올린다
   }
   return h;
 }
@@ -64,7 +64,7 @@ function init(seats) {
   const p = seats.map((_, i) => {
     const x = Math.round((W * (i + 0.5)) / n + Math.random() * 40 - 20), c = Math.round(x / COLW), base = h[c];
     for (let k = -5; k <= 5; k++) if (h[c + k] != null) h[c + k] = base;      // 대포 밑은 평평하게
-    return { x, y: base, vy: 0, hp: 100, f: x < W / 2 ? 1 : -1, el: 50, pw: 0, fuel: FUEL, al: 1, pa: 0, pb: 0, w: 0, sd: 0, xt: 0, am: SHELLS.map((k) => k.n) };
+    return { x, y: base, vy: 0, hp: MAXHP, f: x < W / 2 ? 1 : -1, el: 50, pw: 0, fuel: FUEL, al: 1, pa: 0, pb: 0, w: 0, sd: 0, xt: 0, am: SHELLS.map((k) => k.n) };
   });
   const s = { tick: 0, seats, h, hv: 1, map, th: (Math.random() * THEMES.length) | 0, p, turn: 0, ph: 0, tl: TURN, tm: 0, wind: newWind(), sh: [], ex: [], it: [], msg: [], over: null, fc: 0, bc: 0, dc: 0, tn: 0, wc: 0, bn: 0, ic: 0, fall: 0 };
   spawnItem(s);
@@ -84,7 +84,7 @@ function spawnItem(s) {
 function give(s, i, at) {
   const it = s.it[at], p = s.p[i]; let text = ITEMS[it.k].name;
   s.it.splice(at, 1); s.ic++;
-  if (it.k === 0) { p.hp = Math.min(100, p.hp + 35); text = "체력 +35"; }
+  if (it.k === 0) { p.hp = Math.min(MAXHP, p.hp + 50); text = "체력 +50"; }
   else if (it.k === 1) { const k = 1 + ((Math.random() * (SHELLS.length - 1)) | 0); p.am[k]++; text = SHELLS[k].name + " +1"; }
   else if (it.k === 2) { p.sd = 1; text = "방패!"; }
   else { p.xt = 1; text = "한 번 더!"; }
@@ -112,7 +112,7 @@ function boom(s, x, y, k) {
   for (let i = 0; i < NC; i++) {
     const dx = i * COLW - x;
     if (Math.abs(dx) >= rad) continue;
-    const bottom = y + Math.sqrt(rad * rad - dx * dx) * (sh.dig || 1);
+    const bottom = y + Math.sqrt(rad * rad - dx * dx) * (sh.dig || 1) * 0.85;
     if (bottom > s.h[i]) s.h[i] = bottom >= VOID_Y ? HOLE : Math.round(bottom);      // 바닥까지 파이면 구멍
   }
   s.hv++;
@@ -332,7 +332,7 @@ function draw(ctx, v, env) {
     drawMochi(ctx, x, y - 22, 15, parseLook(v.seats[i].look, i), { ang: p.f > 0 ? -0.3 : Math.PI + 0.3 });
     if (p.sd) { ctx.strokeStyle = "rgba(110,198,255,.95)"; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(x, y - 18, 27 + Math.sin(env.t * 6) * 1.5, 0, 7); ctx.stroke(); }      // 방패
     ctx.fillStyle = "rgba(43,45,110,.85)"; rr(ctx, x - 24, y - 60, 48, 9, 4); ctx.fill();
-    ctx.fillStyle = p.hp > 50 ? "#7ddc7a" : p.hp > 25 ? "#ffc93c" : "#ff5d73"; rr(ctx, x - 22, y - 58, Math.max(2, 44 * p.hp / 100), 5, 2.5); ctx.fill();
+    ctx.fillStyle = p.hp > MAXHP * 0.5 ? "#7ddc7a" : p.hp > MAXHP * 0.25 ? "#ffc93c" : "#ff5d73"; rr(ctx, x - 22, y - 58, Math.max(2, 44 * p.hp / MAXHP), 5, 2.5); ctx.fill();
     label(ctx, v.seats[i].name, x, y - 66, 13, i === env.me ? "#d6336c" : "#2a2440", "rgba(255,255,255,.9)");
     if (p.vy > 4) label(ctx, "으아악!", x + 34, y - 30, 16, "#ff5d73", "#fff");
     if (aiming && i === v.turn) {
@@ -440,7 +440,7 @@ export const meta = {
     ["목표", "번갈아 가며 포탄을 쏴서 상대의 체력을 0으로 만들어요. 마지막까지 남으면 승리"],
     ["조작", "←→ 이동(대포 아래 파란 연료 막대만큼, 차례마다 다시 참), ↑↓ 포신 각도, 스페이스를 꾹 눌러 힘을 모았다가 떼면 발사"],
     ["포탄", "Q로 바꿔요. 기본탄(무제한), 대왕탄(크게 터짐), 세발탄(세 발이 퍼짐), 굴착탄(땅을 깊이 팜), 통통탄(두 번 튄 뒤 터짐). 특수탄은 두 발씩"],
-    ["아이템", "낙하산 상자가 떨어져요. 지나가며 줍거나 포탄으로 맞히면 얻어요. 회복(체력 +35), 포탄 상자(특수탄 +1), 방패(다음 피해 절반), 한 번 더(바로 한 번 더 쏘기)"],
+    ["아이템", "낙하산 상자가 떨어져요. 지나가며 줍거나 포탄으로 맞히면 얻어요. 회복(체력 +50), 포탄 상자(특수탄 +1), 방패(다음 피해 절반), 한 번 더(바로 한 번 더 쏘기)"],
     ["낭떠러지", "땅이 화면 바닥까지 파이면 구멍이 생겨요. 구멍 위의 대포는 떨어져 바로 탈락! 상대 발밑을 노려 보세요(굴착탄이 잘 파여요). 걸어서 구멍에 들어가도 떨어지고, 땅이 꺼져 높이 떨어지면 체력이 줄어요"],
     ["지형", "판마다 언덕·큰 산·골짜기·계단·협곡 가운데 하나가 나오고, 낮·노을·밤·눈밭으로 분위기가 바뀌어요. 차례마다 바람도 바뀌어요"],
     ["한 키보드 2인", "1P: W·A·S·D + F, 포탄 Q / 2P: 방향키 + Enter, 포탄 마침표(.)"],

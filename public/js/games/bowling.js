@@ -1,7 +1,8 @@
 // 떡 볼링 — 번갈아 공을 굴려 핀 열 개를 쓰러뜨린다. 점수는 진짜 볼링처럼(스트라이크·스페어 보너스).
 // 차례제라서 온라인에서도 끊김 없이 할 수 있다.
 
-import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=3";
+import { lazy3d } from "./lazy3d.js?v=1";
+import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=4";
 import { drawMochi, parseLook, bodyColors } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
 
@@ -193,8 +194,13 @@ function bot(s, i, mem, level) {
 }
 
 // ── 그리기 ──
+const stage = lazy3d("./table3d.js?v=2");
 function draw(ctx, v, env) {
-  const th = LANES[v.th | 0] || LANES[0], ink = th.dark ? "#fff" : "#2b2d6e";
+  const th = LANES[v.th | 0] || LANES[0];
+  const scr = ctx, m3 = stage.get();
+  let g3 = null;
+  if (m3) { try { g3 = m3.open("bowl", { rect: [20, 214, 940, 486], unit: 19.4, sky: th.dark ? "night" : "dusk", cam: { fov: 36, y: 8.4, z: 13.4, look: -3.4 }, touch: env.touch, t: env.t }); ctx = g3.board; } catch { g3 = null; stage.fail(); } }
+  const ink = th.dark ? "#fff" : "#2b2d6e";
   ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
   // 레인
   ctx.fillStyle = th.gut; rr(ctx, LX0 - 8, LY0 - GUT - 6, LX1 - LX0 + 60, LY1 - LY0 + GUT * 2 + 12, 12); ctx.fill();
@@ -207,6 +213,7 @@ function draw(ctx, v, env) {
   v.pins.forEach((q, i) => {
     if (q.gone) return;
     const old = env.prev && env.prev.pins[i], x = old && !old.gone ? old.x + (q.x - old.x) * env.alpha : q.x, y = old && !old.gone ? old.y + (q.y - old.y) * env.alpha : q.y;
+    if (g3) { try { g3.pin(i, x, y, { r: PRD, up: !!q.up, ang: i * 2.4 }); } catch { stage.fail(); } return; }
     ctx.globalAlpha = q.up ? 1 : 0.55;
     ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.beginPath(); ctx.ellipse(x + 2, y + 3, PRD, PRD * 0.8, 0, 0, 7); ctx.fill();
     ctx.fillStyle = "#fffdf6"; ctx.strokeStyle = "#2b2d6e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, PRD, 0, 7); ctx.fill(); ctx.stroke();
@@ -225,10 +232,13 @@ function draw(ctx, v, env) {
   if (!v.over && (v.ph !== 1 || v.ball.x < LX1 + 30)) {
     const b = v.ph === 0 ? { x: BX - (v.aim.pp ? v.aim.ax * 0.25 : 0), y: v.aim.y - (v.aim.pp ? v.aim.ay * 0.25 : 0) } : v.ball, old = v.ph === 1 && env.prev && env.prev.ball;
     const x = old ? old.x + (b.x - old.x) * env.alpha : b.x, y = old ? old.y + (b.y - old.y) * env.alpha : b.y;
+    if (g3) { try { g3.mochi("ball", look, x, y, { r: BRD + 3, face: 0 }); } catch { stage.fail(); } } else {
     ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(x + 3, y + 5, BRD, BRD * 0.8, 0, 0, 7); ctx.fill();
     ctx.fillStyle = bodyColors(look).dark; ctx.beginPath(); ctx.arc(x, y, BRD + 2, 0, 7); ctx.fill();
     drawMochi(ctx, x, y + 1, BRD - 1, look, { ang: 0, open: v.ph === 1 });
+    }
   }
+  if (g3) { ctx = scr; try { g3.cheer = !!v.over; ctx.drawImage(g3.close(), 0, 0, W, H); } catch { stage.fail(); } }
   // 점수판
   const n = v.seats.length, rowH = n > 2 ? 44 : 54, cw = v.N === 10 ? 62 : 104, x0 = 250;
   v.seats.forEach((seat, i) => {
@@ -279,7 +289,8 @@ const G = {
   W, H, sendEvery: 2, action: null, overDelay: 220, pointer: true, pointerStart: true, noPad: true,
   bots: { solo: 1, local: 0 },
   fill: (mode, n) => (n < 2 ? 1 : 0),
-  init, step, bot, draw, fx, title,
+  init, step, bot, draw, fx, title, dispose: () => stage.dispose(),
+  mapPointer: (x, y) => { const m = stage.get(); return m ? m.pick(x, y) : [x, y]; },
 };
 
 export const meta = {

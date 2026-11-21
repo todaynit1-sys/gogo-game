@@ -1,7 +1,8 @@
 // 알까기 — 번갈아 내 알을 튕겨 상대 알을 판 밖으로 밀어낸다. 마지막까지 알이 남은 사람이 승리.
 // 차례제라서 온라인에서도 끊김 없이 할 수 있다.
 
-import { startHostGame, L, R, U, D, A, P, B } from "./hostgame.js?v=3";
+import { lazy3d } from "./lazy3d.js?v=1";
+import { startHostGame, L, R, U, D, A, P, B } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=3";
 
@@ -143,8 +144,12 @@ function bot(s, o, mem, level) {
 }
 
 // ── 그리기 ──
+const stage = lazy3d("./table3d.js?v=2");
 function draw(ctx, v, env) {
   const th = BOARDS[v.th | 0] || BOARDS[0];
+  const scr = ctx, m3 = stage.get();
+  let g3 = null;
+  if (m3) { try { g3 = m3.open("alk", { rect: [224, 14, 736, 526], unit: 10.2, sky: th.name === "밤하늘 판" ? "night" : "dusk", cam: { fov: 40, y: 14.4, z: 7.6, look: 0.5 }, touch: env.touch, t: env.t }); ctx = g3.board; } catch { g3 = null; stage.fail(); } }
   ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "rgba(0,0,0,.18)"; rr(ctx, BX - 14, BY - 8, BS + 28, BS + 30, 18); ctx.fill();
   ctx.fillStyle = th.edge; rr(ctx, BX - 16, BY - 16, BS + 32, BS + 32, 18); ctx.fill();
@@ -166,6 +171,7 @@ function draw(ctx, v, env) {
   // 알
   v.st.forEach((q, i) => {
     const old = env.prev && env.prev.st[i], x = old ? old.x + (q.x - old.x) * env.alpha : q.x, y = old ? old.y + (q.y - old.y) * env.alpha : q.y;
+    if (g3) { if (q.al) { try { g3.disc(i, x, y, { r: SR, h: 13, color: SEAT_TINT[q.o] }); g3.mochi(i, parseLook(v.seats[q.o].look, q.o), x, y, { r: 11, lift: 13 }); } catch { stage.fail(); } } return; }
     if (!q.al) {
       if (q.ft >= 30) return;
       ctx.globalAlpha = 1 - q.ft / 30;
@@ -177,6 +183,7 @@ function draw(ctx, v, env) {
     ctx.beginPath(); ctx.arc(x, y, SR, 0, 7); ctx.fill(); ctx.stroke();
     drawMochi(ctx, x, y + 1, 11, parseLook(v.seats[q.o].look, q.o));
   });
+  if (g3) { ctx = scr; try { g3.cheer = !!v.over; ctx.drawImage(g3.close(), 0, 0, W, H); } catch { stage.fail(); } }
   // 선수 카드
   v.seats.forEach((seat, o) => {
     const X = o % 2 === 0 ? 20 : W - 220, Y = o < 2 ? 70 : 250, n = v.st.filter((q) => q.o === o && q.al).length, on = o === v.turn && !v.over;
@@ -220,7 +227,8 @@ const G = {
   W, H, sendEvery: 2, action: null, overDelay: 220, pointer: true, pointerStart: true, noPad: true,
   bots: { solo: 1, local: 0 },
   fill: (mode, n) => (n < 2 ? 1 : 0),
-  init, step, bot, draw, fx, title,
+  init, step, bot, draw, fx, title, dispose: () => stage.dispose(),
+  mapPointer: (x, y) => { const m = stage.get(); return m ? m.pick(x, y) : [x, y]; },
 };
 
 export const meta = {

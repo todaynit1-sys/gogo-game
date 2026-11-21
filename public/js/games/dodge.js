@@ -2,7 +2,7 @@
 // 날아오는 공을 제때 잡으면 던진 사람 하트가 준다. 상대 팀을 모두 탈락시키면 승리.
 
 import { lazy3d } from "./lazy3d.js?v=1";
-import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=3";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle } from "./kit.js?v=3";
 

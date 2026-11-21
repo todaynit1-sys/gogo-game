@@ -2,7 +2,7 @@
 // 투수: 공을 겨누고 구종(직구·커브·슬라이더·체인지업)을 골라 던진다.
 // 타자: 방망이 위치를 맞추고 공이 들어오는 순간 휘두른다. 맞은 결과(안타·홈런·아웃)와 주자 진루는 저절로 계산된다.
 
-import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=3";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_DARK, SEAT_TINT } from "./kit.js?v=3";
 

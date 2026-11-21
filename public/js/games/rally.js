@@ -1,7 +1,7 @@
 // 노을 옥상 라켓 — 해질녘 옥상 코트에서 하는 1대1 라켓 경기 (3D).
 // 규칙·계산은 이 파일, 3D 무대는 rally3d.js 가 맡는다. 방장 브라우저가 계산하고 상대는 결과를 받아 그린다.
 
-import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=3";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle } from "./kit.js?v=3";
 

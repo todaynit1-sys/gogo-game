@@ -1,7 +1,8 @@
 // 윷놀이 — 윷을 던져 나온 만큼 말을 옮긴다. 윷·모가 나오거나 상대 말을 잡으면 한 번 더.
 // 내 말끼리 만나면 업혀서 같이 간다. 말을 모두 먼저 내보내는 사람이 승리.
 
-import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=3";
+import { lazy3d } from "./lazy3d.js?v=1";
+import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=3";
 
@@ -262,7 +263,13 @@ function drawStick(ctx, x, y, ang, isFlat, marked) {
   ctx.restore();
 }
 
+const stage = lazy3d("./table3d.js?v=2");
+let g3cur = null;
 function draw(ctx, v, env) {
+  const scr = ctx, m3 = stage.get();
+  let g3 = null;
+  if (m3) { try { g3 = m3.open("yut", { rect: [28, 18, 532, 538], unit: 7.3, frame: 0x8a5a3c, cam: { fov: 40, x: 4.5, y: 12.6, z: 8.6, look: 0.2 }, touch: env.touch, t: env.t }); ctx = g3.board; } catch { g3 = null; stage.fail(); } }
+  g3cur = g3;
   ctx.fillStyle = "#f7ecd4"; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "rgba(160,110,40,.06)";
   for (let y = 10; y < H; y += 22) for (let x = 10 + ((y / 22) % 2) * 11; x < W; x += 22) { ctx.beginPath(); ctx.arc(x, y, 1.5, 0, 7); ctx.fill(); }
@@ -314,6 +321,11 @@ function draw(ctx, v, env) {
     drawGroup(ctx, v, mo, a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f - hop, moving.size, env);
   }
 
+  if (g3) {
+    ctx = scr; g3cur = null;
+    try { g3.cheer = !!v.over; ctx.drawImage(g3.close(), 0, 0, W, H); } catch { stage.fail(); }
+    ctx.fillStyle = "rgba(247,236,212,.94)"; ctx.strokeStyle = "#8a5a3c"; ctx.lineWidth = 3; rr(ctx, 518, 8, 434, 524, 18); ctx.fill(); ctx.stroke();
+  }
   // 오른쪽: 선수
   v.seats.forEach((seat, q) => {
     const y = 22 + q * ROW_H, on = q === o && !v.over, list = v.pc[q];
@@ -366,6 +378,12 @@ function draw(ctx, v, env) {
 
 function drawGroup(ctx, v, q, x, y, cnt, env) {
   const look = parseLook(v.seats[q].look, q);
+  if (g3cur) {      // 3D: 업은 말은 위로 쌓는다
+    const base = (g3cur._n = (g3cur._f === env.t ? g3cur._n : 0)); g3cur._f = env.t;
+    try { for (let k = 0; k < cnt; k++) g3cur.mochi(q * 40 + base + k, look, x, y, { r: 17, ring: k ? null : SEAT_DARK[q], lift: k * 24 }); } catch { stage.fail(); }
+    g3cur._n = base + cnt;
+    return;
+  }
   for (let k = cnt - 1; k >= 0; k--) {
     const yy = y - k * 7;
     ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.beginPath(); ctx.ellipse(x, y + 14, 15, 5, 0, 0, 7); ctx.fill();
@@ -397,7 +415,8 @@ const G = {
   W, H, sendEvery: 3, action: null, overDelay: 220, pointer: true, pointerStart: true, noPad: true,
   bots: { solo: 1, local: 0 },
   fill: (mode, n) => (n < 2 ? 1 : 0),
-  init, step, bot, draw, fx, title,
+  init, step, bot, draw, fx, title, dispose: () => stage.dispose(),
+  mapPointer: (x, y) => { const m = stage.get(); return m && x < 516 ? m.pick(x, y) : [x, y]; },
 };
 
 export const meta = {
