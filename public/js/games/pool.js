@@ -1,7 +1,7 @@
 // 미니 당구 — 번갈아 흰 공(내 떡)을 쳐서 색 공을 구멍에 넣는다.
 // 넣으면 한 번 더, 흰 공이 빠지면 1점 깎이고 차례가 넘어간다. 공을 다 넣었을 때 점수가 가장 높으면 승리.
 
-import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=2";
+import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=3";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
 

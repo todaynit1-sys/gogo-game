@@ -173,6 +173,7 @@ export function startHostGame(G, opts) {
     },
     stop() {
       stopLoop(); kb.stop(); pad.stop();
+      if (G.dispose) G.dispose();
       if (hurrySaid) emit("hurry", false);
       canvas.removeEventListener("pointerdown", pd); canvas.removeEventListener("pointermove", pm);
       canvas.removeEventListener("pointerup", pu); canvas.removeEventListener("pointercancel", pu);

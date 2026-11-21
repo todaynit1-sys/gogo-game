@@ -1,7 +1,7 @@
 // 쾅쾅 포격전 — 번갈아 가며 각도와 힘을 맞춰 포탄을 쏜다. 땅이 파이고, 바람이 분다.
 // 포탄 다섯 가지, 판마다 다른 지형과 하늘. 마지막까지 버틴 사람이 승리.
 
-import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=2";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=3";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
 

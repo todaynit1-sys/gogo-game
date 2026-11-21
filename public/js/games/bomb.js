@@ -1,6 +1,7 @@
 // 폭탄 미로 — 미로에서 폭탄을 놓아 상자를 부수고, 끝까지 살아남으면 승리.
 
-import { startHostGame, L, R, U, D, A } from "./hostgame.js?v=2";
+import { lazy3d } from "./lazy3d.js?v=1";
+import { startHostGame, L, R, U, D, A } from "./hostgame.js?v=3";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=3";
 
@@ -283,11 +284,23 @@ function drawItem(ctx, ch, x, y) {
   else { ctx.fillStyle = "#ffc93c"; ctx.strokeStyle = "#d99a12"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 3, y - 11); ctx.lineTo(x - 7, y + 2); ctx.lineTo(x - 1, y + 2); ctx.lineTo(x - 3, y + 11); ctx.lineTo(x + 7, y - 2); ctx.lineTo(x + 1, y - 2); ctx.closePath(); ctx.fill(); ctx.stroke(); }
 }
 
+const stage = lazy3d("./bomb3d.js?v=1");
 function draw(ctx, v, env) {
   const th = THEMES[v.th | 0] || THEMES[0];
   ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
   ctx.save();
   if (shake > 0.5) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+  let d3 = null;
+  const m3 = stage.get();
+  if (m3) { try { d3 = m3.render(v, env, th, drawItem); ctx.drawImage(d3.cv, 0, 0, W, H); } catch { d3 = null; stage.fail(); } }
+  if (d3) {
+    v.p.forEach((p, i) => {
+      const tag = d3.tags[i]; if (!tag) return;
+      const [x, y] = tag;
+      if (i === env.me) { ctx.fillStyle = "#ffd66b"; ctx.strokeStyle = "#2b2d6e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 8, y - 11); ctx.lineTo(x + 8, y - 11); ctx.lineTo(x, y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      else label(ctx, v.seats[i].name, x, y, 12, "#fff", "rgba(43,45,110,.85)");
+    });
+  } else {
   // 판
   ctx.fillStyle = "#2b2d6e"; rr(ctx, OX - 6, OY - 6, GW * CELL + 12, GH * CELL + 12, 12); ctx.fill();
   for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
@@ -330,6 +343,7 @@ function draw(ctx, v, env) {
     if (i === env.me) { ctx.fillStyle = "#d6336c"; ctx.beginPath(); ctx.moveTo(X - 6, Y - 37); ctx.lineTo(X + 6, Y - 37); ctx.lineTo(X, Y - 29); ctx.fill(); }
     else label(ctx, v.seats[i].name, X, Y - 28, 12, "#2a2440", "rgba(255,255,255,.9)");
   });
+  }
   ctx.restore();
 
   // 양옆 선수 카드
@@ -345,7 +359,7 @@ function draw(ctx, v, env) {
   });
 
   // 위쪽 안내
-  label(ctx, `${MAPS[v.map | 0]} · ${th.name}`, W - 12, 26, 14, th.name === "우주 기지" ? "#fff" : "#2b2d6e", null, "right");
+  label(ctx, `${MAPS[v.map | 0]} · ${th.name}`, W - 12, 26, 14, d3 || th.name === "우주 기지" ? "#fff" : "#2b2d6e", d3 ? "rgba(43,45,110,.8)" : null, "right");
   const left = Math.ceil((SHRINK_AT - v.tick) / 60);
   if (v.tick < START) label(ctx, "준비!", W / 2, H / 2, 80, "#ff5d73", "#fff");
   if (left > 0) label(ctx, `${left}초 뒤 벽이 좁혀 와요`, W / 2, 32, left <= 10 ? 24 : 20, left <= 10 ? "#ff5d73" : "#2b2d6e", "#fff");
@@ -379,7 +393,7 @@ const G = {
   hurry: (v) => v.tick >= SHRINK_AT,
   bots: { solo: 3, local: 2 },
   fill: (mode, n) => (mode === 1 ? (n < 2 ? 1 : 0) : 4 - n),
-  init, step, bot, draw, fx, title, pack, viewOf: pack, adopt,
+  init, step, bot, draw, fx, title, dispose: () => stage.dispose(), pack, viewOf: pack, adopt,
 };
 
 export const meta = {

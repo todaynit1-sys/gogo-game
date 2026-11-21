@@ -1,7 +1,7 @@
 // 윷놀이 — 윷을 던져 나온 만큼 말을 옮긴다. 윷·모가 나오거나 상대 말을 잡으면 한 번 더.
 // 내 말끼리 만나면 업혀서 같이 간다. 말을 모두 먼저 내보내는 사람이 승리.
 
-import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=2";
+import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=3";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=3";
 

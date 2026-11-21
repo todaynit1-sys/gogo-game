@@ -1,7 +1,7 @@
 // 떡 볼링 — 번갈아 공을 굴려 핀 열 개를 쓰러뜨린다. 점수는 진짜 볼링처럼(스트라이크·스페어 보너스).
 // 차례제라서 온라인에서도 끊김 없이 할 수 있다.
 
-import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=2";
+import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=3";
 import { drawMochi, parseLook, bodyColors } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
 

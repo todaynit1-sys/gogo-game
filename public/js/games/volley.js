@@ -5,6 +5,9 @@
 import { drawMochi as paintMochi, parseLook } from "../avatar.js?v=3";
 import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, BOT_NAMES, SEAT_DARK, emit } from "./kit.js?v=3";
 
+import { lazy3d } from "./lazy3d.js?v=1";
+const stage = lazy3d("./volley3d.js?v=1");
+
 const W = 960, H = 540, GROUND = 470, NET_X = 480, NET_HW = 7, NET_TOP = GROUND - 165;
 const PR = 40, BR = 24, DT = 1 / 60;
 const MOVE = 400, JUMP = 930, PG = 2300, BG = 1250;
@@ -368,9 +371,10 @@ export function start(opts) {
   }
 
   // ── 그리기 ──
-  let ctx = null;
+  let ctx = null, use3d = false;
   function drawMochi(p, i, s, isMe) {
     const b = s.b;
+    if (!use3d) {
     const air = p.y < GROUND - PR - 2;
     let sq = air ? Math.max(-0.16, Math.min(0.16, -p.vy / 5200)) : Math.sin(s.tick * 0.12 + i) * 0.025;
     if (p.dv > 0) sq = -0.46; else if (p.rc > 0) sq = -0.46 + (11 - p.rc) * 0.04;
@@ -388,6 +392,7 @@ export function start(opts) {
       for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.moveTo(p.x - p.dd * 50, GROUND - 16 - q * 12); ctx.lineTo(p.x - p.dd * (95 + q * 14), GROUND - 16 - q * 12); ctx.stroke(); }
     }
     paintMochi(ctx, p.x, p.y, PR, slotLook(i), { ang: Math.atan2(b.y - p.y, b.x - p.x), sq, open: p.sm > 0 || p.dv > 0 });
+    }
     const name = slotName(i);
     ctx.font = "700 17px Jua, 'Malgun Gothic', sans-serif"; ctx.textAlign = "center";
     const ny = Math.min(p.y - PR - 34, GROUND - PR * 2 - 34);
@@ -401,6 +406,10 @@ export function start(opts) {
     const s = view;
     const t = performance.now() / 1000;
     const th = COURTS[(s && s.th) | 0] || COURTS[0];
+    let d3 = null;
+    if (s) { const m3 = stage.get(); if (m3) { try { d3 = m3.render(s, { t, touch: !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches), thi: (s.th | 0) % COURTS.length, looks: s.p.map((_, i) => slotLook(i)) }); ctx.drawImage(d3.cv, 0, 0, W, H); } catch { d3 = null; stage.fail(); } } }
+    use3d = !!d3;
+    if (!d3) {
     const g = ctx.createLinearGradient(0, 0, 0, GROUND);
     g.addColorStop(0, th.sky[0]); g.addColorStop(1, th.sky[1]);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -428,6 +437,7 @@ export function start(opts) {
     ctx.fillStyle = th.floor; ctx.fillRect(0, GROUND, W, H - GROUND);
     ctx.fillStyle = th.edge; ctx.fillRect(0, GROUND, W, 6);
     if (th.gym) { ctx.fillStyle = "rgba(255,255,255,.7)"; ctx.fillRect(0, GROUND + 26, W, 4); }
+    }
 
     if (!s) {
       ctx.fillStyle = "#4a3b33"; ctx.font = "700 30px Jua, sans-serif"; ctx.textAlign = "center";
@@ -438,18 +448,20 @@ export function start(opts) {
     if (shake > 0.5) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
     // 네트
+    if (!d3) {
     ctx.fillStyle = "#8a5a3c"; ctx.fillRect(NET_X - NET_HW, NET_TOP, NET_HW * 2, GROUND - NET_TOP);
     ctx.fillStyle = "#fff"; ctx.fillRect(NET_X - NET_HW - 2, NET_TOP - 6, NET_HW * 2 + 4, 10);
     ctx.fillStyle = "rgba(255,255,255,.55)";
     for (let y = NET_TOP + 14; y < GROUND - 8; y += 16) ctx.fillRect(NET_X - NET_HW, y, NET_HW * 2, 3);
+    }
 
     const me = kind === "local" ? -1 : mySlot();
     for (let i = 0; i < s.p.length; i++) drawMochi(s.p[i], i, s, i === me);
 
     // 공
     const b = s.b, sp = Math.hypot(b.vx, b.vy);
-    if (sp > 800) trail.forEach((q, i) => { ctx.fillStyle = `rgba(255,120,80,${i * 0.045})`; ctx.beginPath(); ctx.arc(q.x, q.y, BR * (0.5 + i * 0.07), 0, 7); ctx.fill(); });
-    ctx.fillStyle = "rgba(80,50,20,.16)"; ctx.beginPath(); ctx.ellipse(b.x, GROUND + 4, BR * Math.max(0.35, 1 - (GROUND - b.y) / 900), 5, 0, 0, 7); ctx.fill();
+    if (!d3) if (sp > 800) trail.forEach((q, i) => { ctx.fillStyle = `rgba(255,120,80,${i * 0.045})`; ctx.beginPath(); ctx.arc(q.x, q.y, BR * (0.5 + i * 0.07), 0, 7); ctx.fill(); });
+    if (!d3) { ctx.fillStyle = "rgba(80,50,20,.16)"; ctx.beginPath(); ctx.ellipse(b.x, GROUND + 4, BR * Math.max(0.35, 1 - (GROUND - b.y) / 900), 5, 0, 0, 7); ctx.fill(); }
     if (b.y < -BR) {      // 화면 위로 나간 공: 어디로 떨어질지 화살표로 알려 준다
       const up = Math.min(1, (-b.y - BR) / 500), r = 15 - up * 6, mx = Math.max(26, Math.min(W - 26, b.x));
       ctx.save(); if (Math.abs(mx - W / 2) < 130) ctx.translate(0, 96);      // 점수판 밑으로 비켜 그린다
@@ -459,6 +471,7 @@ export function start(opts) {
       ctx.beginPath(); ctx.arc(mx, 46, r, 0, 7); ctx.fill(); ctx.stroke();
       ctx.restore();
     }
+    if (!d3) {
     ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(s.tick * 0.02 + b.x * 0.02);
     ctx.fillStyle = "#fff"; ctx.strokeStyle = "#3d6fd6"; ctx.lineWidth = 3.5;
     ctx.beginPath(); ctx.arc(0, 0, BR, 0, 7); ctx.fill(); ctx.stroke();
@@ -466,6 +479,7 @@ export function start(opts) {
     ctx.beginPath(); ctx.arc(0, 0, BR - 8, -0.6, 0.9); ctx.stroke();
     ctx.strokeStyle = "#3d6fd6"; ctx.beginPath(); ctx.arc(0, 0, BR - 8, 2.4, 3.9); ctx.stroke();
     ctx.restore();
+    }
     ctx.restore();
 
     // 강타 불꽃
@@ -528,7 +542,7 @@ export function start(opts) {
       if (!wasHost && iAmHost() && snap) { sim = snap; view = sim; }
       lastSentMask = -1;
     },
-    stop() { stopLoop(); kb.stop(); pad.stop(); if (hurrySaid) emit("hurry", false); },
+    stop() { stopLoop(); kb.stop(); pad.stop(); stage.dispose(); if (hurrySaid) emit("hurry", false); },
     peek() { return { b: view ? view.b : null, host: iAmHost(), tick: view ? view.tick : -1, sc: view ? view.sc : null, sl: view ? view.sl : 0, p: view ? view.p.map((q) => [Math.round(q.x), q.dv, q.rc]) : [] }; },
   };
 }

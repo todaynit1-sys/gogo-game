@@ -1,7 +1,7 @@
 // 알까기 — 번갈아 내 알을 튕겨 상대 알을 판 밖으로 밀어낸다. 마지막까지 알이 남은 사람이 승리.
 // 차례제라서 온라인에서도 끊김 없이 할 수 있다.
 
-import { startHostGame, L, R, U, D, A, P, B } from "./hostgame.js?v=2";
+import { startHostGame, L, R, U, D, A, P, B } from "./hostgame.js?v=3";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_TINT, SEAT_DARK } from "./kit.js?v=3";
 

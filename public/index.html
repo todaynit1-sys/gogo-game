@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=10">
+<link rel="stylesheet" href="/css/app.css?v=11">
 </head>
 <body>
 <header class="top">
@@ -157,6 +157,7 @@
     <div class="playbar">
       <button class="back" id="exitPlay" type="button">← 나가기</button>
       <span id="playInfo"></span>
+      <button class="chip chip-line" id="howBtn" type="button">하는 법</button>
       <button class="chip chip-line" id="emoBtn" type="button">말풍선</button>
       <button class="chip chip-line" id="musicBtn2" type="button">음악 끄기</button>
       <button class="chip chip-line" id="fsBtn" type="button" hidden>전체 화면</button>
@@ -171,6 +172,13 @@
       <canvas id="fxCv" class="fxcv" aria-hidden="true"></canvas>
       <div class="bubbles" id="bubbles" aria-live="polite"></div>
       <div class="emobar" id="emoBar" hidden></div>
+      <div class="howpanel" id="howPanel" hidden>
+        <div class="howsheet" role="dialog" aria-labelledby="howTitle">
+          <h3 id="howTitle">하는 법</h3>
+          <ul id="howPlayList"></ul>
+          <button class="btn btn-coral" id="howClose" type="button">알겠어요</button>
+        </div>
+      </div>
       <div class="result" id="result" hidden>
         <h2 id="resTitle"></h2>
         <p class="ressub" id="resSub"></p>
@@ -198,6 +206,6 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script type="module" src="/js/app.js?v=28"></script>
+<script type="module" src="/js/app.js?v=30"></script>
 </body>
 </html>

@@ -1,7 +1,8 @@
 // 떡 축구 — 위에서 내려다보는 미니 축구. 몸으로 밀고, 차기 버튼으로 뻥 찬다.
 // 2분 동안 골을 더 많이 넣은 팀이 승리(5골을 먼저 넣어도 끝).
 
-import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=2";
+import { lazy3d } from "./lazy3d.js?v=1";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=3";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle } from "./kit.js?v=3";
 
@@ -147,8 +148,15 @@ function bot(s, i, mem, level) {
 }
 
 // ── 그리기 ──
+const stage = lazy3d("./soccer3d.js?v=3");
 function draw(ctx, v, env) {
   const fd = FIELDS[v.th | 0] || FIELDS[0];
+  let d3 = null;
+  const m3 = stage.get();
+  if (m3) { try { d3 = m3.render(v, env, fd); ctx.drawImage(d3.cv, 0, 0, W, H); } catch { d3 = null; stage.fail(); } }
+  if (d3) {
+    v.p.forEach((p, i) => { const [x, y] = d3.tags[i]; if (i === env.me) { ctx.fillStyle = "#fff"; ctx.strokeStyle = "#2b2d6e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 8, y - 10); ctx.lineTo(x + 8, y - 10); ctx.lineTo(x, y); ctx.closePath(); ctx.fill(); ctx.stroke(); } else label(ctx, v.seats[i].name, x, y, 12, "#fff", "rgba(43,45,110,.8)"); });
+  } else {
   ctx.fillStyle = fd.out; ctx.fillRect(0, 0, W, H);
   for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? fd.a : fd.b; ctx.fillRect(FX0 + (i * (FX1 - FX0)) / 8, FY0, (FX1 - FX0) / 8, FY1 - FY0); }
   ctx.strokeStyle = fd.line; ctx.lineWidth = 4;
@@ -188,6 +196,7 @@ function draw(ctx, v, env) {
   ctx.fillStyle = "#2a2440"; ctx.beginPath(); ctx.arc(0, 0, 4.2, 0, 7); ctx.fill();
   for (let k = 0; k < 5; k++) { const a = (k / 5) * 6.283; ctx.beginPath(); ctx.arc(Math.cos(a) * 9.5, Math.sin(a) * 9.5, 2.6, 0, 7); ctx.fill(); }
   ctx.restore();
+  }
   // 점수판
   ctx.fillStyle = "rgba(255,253,246,.94)"; rr(ctx, CX - 150, 6, 300, 46, 14); ctx.fill();
   label(ctx, String(v.sc[0]), CX - 100, 42, 36, TEAM[0], null);
@@ -236,7 +245,7 @@ const G = {
   bots: { solo: 3, local: 2 },
   cap: (mode, n) => mode || (n >= 3 ? 4 : 2),
   fill: (mode, n) => Math.max(0, (mode || (n >= 3 ? 4 : 2)) - n),
-  init, step, bot, draw, fx, title,
+  init, step, bot, draw, fx, title, dispose: () => stage.dispose(),
 };
 
 export const meta = {

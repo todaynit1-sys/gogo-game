@@ -23,7 +23,7 @@ let soloMode = 0;         // 혼자·한 키보드에서 고른 경기 방식(�
 let gameId = null, sawLobby = false, overPending = false;
 
 // 게임 모듈은 고를 때 불러온다
-const VER = "?v=25";
+const VER = "?v=31";
 const mods = {};
 const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" + VER));
 
@@ -262,7 +262,7 @@ async function playOffline(cfg) {
 }
 
 window.__hp = () => (game && game.peek ? game.peek() : null);   // 점검용
-function stopGame() { if (game) { game.stop(); game = null; gameId = null; } }
+function stopGame() { $("howPanel").hidden = true; if (game) { game.stop(); game = null; gameId = null; } }
 
 // ── 온라인 ──
 // 내 컴퓨터에서 개발할 때는 같이 뜬 로컬 서버를 쓴다
@@ -539,6 +539,18 @@ function init() {
   // 말풍선
   buildEmoBar();
   $("emoBtn").addEventListener("click", () => { $("emoBar").hidden = !$("emoBar").hidden; });
+  $("howBtn").addEventListener("click", async () => {
+    const panel = $("howPanel");
+    if (!panel.hidden) { panel.hidden = true; return; }
+    const id = gameId || (current && current.id); if (!id) return;
+    let mod; try { mod = await loadMod(id); } catch { return; }
+    const g = GAMES.find((x) => x.id === id), list = $("howPlayList"); list.innerHTML = "";
+    $("howTitle").textContent = (g ? g.name + " " : "") + "하는 법";
+    for (const [k, v] of mod.meta.howto) { const li = document.createElement("li"), b = document.createElement("b"); b.textContent = k; li.append(b, " " + v); list.append(li); }
+    panel.hidden = false;
+  });
+  $("howClose").addEventListener("click", () => { $("howPanel").hidden = true; });
+  $("howPanel").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
   document.addEventListener("keydown", (e) => {
     if ($("v-play").hidden || (e.target && /INPUT|TEXTAREA/.test(e.target.tagName))) return;
     const k = /^Digit([1-6])$/.exec(e.code);

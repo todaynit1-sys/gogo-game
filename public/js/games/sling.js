@@ -1,7 +1,7 @@
 // 새총 무너뜨리기 — 번갈아 새총으로 몸을 날려 성을 무너뜨리고 도깨비를 잡는다.
 // 세 판 동안 점수를 가장 많이 낸 사람이 승리.
 
-import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=2";
+import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=3";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
 

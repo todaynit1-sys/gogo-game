@@ -1,7 +1,8 @@
 // 떡 피구 — 코트를 반으로 나눠 공을 던져 상대를 맞힌다. 맞으면 하트가 하나 줄고,
 // 날아오는 공을 제때 잡으면 던진 사람 하트가 준다. 상대 팀을 모두 탈락시키면 승리.
 
-import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=2";
+import { lazy3d } from "./lazy3d.js?v=1";
+import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=3";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle } from "./kit.js?v=3";
 
@@ -226,8 +227,21 @@ function heart(ctx, x, y, s, fill) {
   ctx.bezierCurveTo(x + s * 0.6, y - s * 1.2, x + s * 1.5, y - s * 0.2, x, y + s * 0.9); ctx.fill();
 }
 
+const stage = lazy3d("./dodge3d.js?v=2");
 function draw(ctx, v, env) {
   const c = COURTS[v.th | 0] || COURTS[0];
+  let d3 = null;
+  const m3 = stage.get();
+  if (m3) { try { d3 = m3.render(v, env, c); ctx.drawImage(d3.cv, 0, 0, W, H); } catch { d3 = null; stage.fail(); } }
+  if (d3) {
+    v.p.forEach((p, i) => {
+      const tag = d3.tags[i]; if (!tag) return;
+      const [x, y] = tag;
+      for (let k = 0; k < p.mh; k++) heart(ctx, x - (p.mh - 1) * 8 + k * 16, y, 6, k < p.hp ? "#ff5d73" : "rgba(43,45,110,.35)");
+      if (i === env.me) { ctx.fillStyle = "#fff"; ctx.strokeStyle = "#2b2d6e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 8, y - 26); ctx.lineTo(x + 8, y - 26); ctx.lineTo(x, y - 15); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      else label(ctx, v.seats[i].name, x, y - 14, 12, "#fff", "rgba(43,45,110,.8)");
+    });
+  } else {
   ctx.fillStyle = c.out; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = c.a; ctx.fillRect(FX0, FY0, MID - FX0, FY1 - FY0);
   ctx.fillStyle = c.b; ctx.fillRect(MID, FY0, FX1 - MID, FY1 - FY0);
@@ -265,6 +279,7 @@ function draw(ctx, v, env) {
   ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.beginPath(); ctx.ellipse(bx, by + 9, 10, 4, 0, 0, 7); ctx.fill();
   ctx.fillStyle = "#e8453c"; ctx.strokeStyle = "#9b2f3a"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(bx, by, BR, 0, 7); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(bx, by, BR - 4, -0.5, 1.2); ctx.stroke();
+  }
   // 점수판
   const hp = [0, 0]; v.p.forEach((p) => { hp[p.team] += p.al ? p.hp : 0; });
   ctx.fillStyle = "rgba(255,253,246,.94)"; rr(ctx, W / 2 - 190, 8, 380, 50, 14); ctx.fill();
@@ -273,7 +288,7 @@ function draw(ctx, v, env) {
   const sec = Math.max(0, Math.ceil(v.time / 60));
   label(ctx, `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`, W / 2, 42, 22, sec > 10 ? "#2b2d6e" : "#ff5d73", null);
   label(ctx, c.name, W - 14, H - 12, 14, "#fff", "rgba(43,45,110,.7)", "right");
-  for (const q of v.msg) if (q.t < 60) label(ctx, q.text, q.x, q.y - q.t * 0.6, 22, q.col, "#fff");
+  for (const q of v.msg) if (q.t < 60) { const [mx, my] = d3 ? d3.at(q.x, q.y, 1.6) : [q.x, q.y]; label(ctx, q.text, mx, my - q.t * 0.6, 22, q.col, "#fff"); }
   if (env.me >= 0 && v.tick < 480 && !v.over) label(ctx, env.touch ? `나는 ${TEAM_NAME[env.me % 2]} · [던지기]: 공을 들면 던지기, 없으면 잡기 · [대시]: 돌진` : `나는 ${TEAM_NAME[env.me % 2]} · 스페이스: 공을 들면 던지기, 없으면 잡기 · Q: 대시`, W / 2, H - 12, 16, "#fff", "rgba(43,45,110,.85)");
   if (v.tick < START) label(ctx, "준비!", W / 2, CY + 20, 70, "#fff", "#2b2d6e");
   if (v.over) {
@@ -307,7 +322,7 @@ const G = {
   bots: { solo: 3, local: 2 },
   cap: (mode, n) => mode || (n >= 3 ? 4 : 2),
   fill: (mode, n) => Math.max(0, (mode || (n >= 3 ? 4 : 2)) - n),
-  init, step, bot, draw, fx, title,
+  init, step, bot, draw, fx, title, dispose: () => stage.dispose(),
 };
 
 export const meta = {
