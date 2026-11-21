@@ -6,12 +6,12 @@ import { drawMochi as paintMochi, parseLook } from "../avatar.js?v=3";
 import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, BOT_NAMES, SEAT_DARK, emit } from "./kit.js?v=3";
 
 import { lazy3d } from "./lazy3d.js?v=1";
-const stage = lazy3d("./volley3d.js?v=1");
+const stage = lazy3d("./volley3d.js?v=2");
 
 const W = 960, H = 540, GROUND = 470, NET_X = 480, NET_HW = 7, NET_TOP = GROUND - 165;
 const PR = 40, BR = 24, DT = 1 / 60;
 const MOVE = 400, JUMP = 930, PG = 2300, BG = 1250;
-const WIN_SCORE = 7, SKY = -900;
+const WIN_SCORE = 7, ZOOM = 0.7, SKY = H - H / ZOOM + BR + 2;      // 3D 화면은 조금 멀리서 봐서(캐릭터가 작아짐) 높이 뜬 공도 화면 안에 보인다
 
 const L = 1, R = 2, U = 4, A = 8, D = 16;
 const HOME = { 2: [240, 720], 4: [310, 650, 130, 830] };
@@ -100,7 +100,7 @@ function step(s, masks) {
   b.x += b.vx * DT; b.y += b.vy * DT;
   if (b.x < BR) { b.x = BR; b.vx = Math.abs(b.vx) * 0.9; }
   if (b.x > W - BR) { b.x = W - BR; b.vx = -Math.abs(b.vx) * 0.9; }
-  if (b.y < SKY) { b.y = SKY; b.vy = Math.abs(b.vy) * 0.5; }      // 천장 없음: 하늘 높이 떴다가 그대로 떨어진다
+  if (b.y < SKY) { b.y = SKY; b.vy = Math.abs(b.vy) * 0.5; }      // 화면 맨 위가 천장
 
   // 네트 (사각형과 원 충돌)
   const cx = Math.max(NET_X - NET_HW, Math.min(b.x, NET_X + NET_HW));
@@ -446,6 +446,7 @@ export function start(opts) {
     }
     ctx.save();
     if (shake > 0.5) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    if (d3) { ctx.translate((W / 2) * (1 - ZOOM), H * (1 - ZOOM)); ctx.scale(ZOOM, ZOOM); }      // 3D 는 멀리서 보므로 이름표·불꽃 자리도 같이 줄인다
 
     // 네트
     if (!d3) {
@@ -462,7 +463,7 @@ export function start(opts) {
     const b = s.b, sp = Math.hypot(b.vx, b.vy);
     if (!d3) if (sp > 800) trail.forEach((q, i) => { ctx.fillStyle = `rgba(255,120,80,${i * 0.045})`; ctx.beginPath(); ctx.arc(q.x, q.y, BR * (0.5 + i * 0.07), 0, 7); ctx.fill(); });
     if (!d3) { ctx.fillStyle = "rgba(80,50,20,.16)"; ctx.beginPath(); ctx.ellipse(b.x, GROUND + 4, BR * Math.max(0.35, 1 - (GROUND - b.y) / 900), 5, 0, 0, 7); ctx.fill(); }
-    if (b.y < -BR) {      // 화면 위로 나간 공: 어디로 떨어질지 화살표로 알려 준다
+    if (!d3 && b.y < -BR) {      // 화면 위로 나간 공: 어디로 떨어질지 화살표로 알려 준다
       const up = Math.min(1, (-b.y - BR) / 500), r = 15 - up * 6, mx = Math.max(26, Math.min(W - 26, b.x));
       ctx.save(); if (Math.abs(mx - W / 2) < 130) ctx.translate(0, 96);      // 점수판 밑으로 비켜 그린다
       ctx.fillStyle = "#ff5d73"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;

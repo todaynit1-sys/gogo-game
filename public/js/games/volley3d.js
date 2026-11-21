@@ -20,8 +20,8 @@ function build(touch, thi) {
   // 양 끝 그물 울타리 (공이 튕겨 나오는 벽)
   const fenceM = basic(0xffffff, { map: netTex, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false });
   for (const x of [-8.45, 8.45]) {
-    const f = new THREE.Mesh(new THREE.PlaneGeometry(6.8, 8.6), fenceM); f.rotation.y = Math.PI / 2; f.position.set(x, 4.3, 0); sc.add(f);
-    for (const z of [-3.4, 3.4]) sc.add(mesh(new THREE.CylinderGeometry(0.07, 0.08, 8.6, 8), mat(0x39406e, 0.6), x, 4.3, z));
+    const f = new THREE.Mesh(new THREE.PlaneGeometry(6.8, 12.4), fenceM); f.rotation.y = Math.PI / 2; f.position.set(x, 6.2, 0); sc.add(f);
+    for (const z of [-3.4, 3.4]) sc.add(mesh(new THREE.CylinderGeometry(0.07, 0.08, 12.4, 8), mat(0x39406e, 0.6), x, 6.2, z));
   }
   // 공
   const ballTex = canvasTex(128, 64, (c) => { c.fillStyle = "#fff"; c.fillRect(0, 0, 128, 64); c.fillStyle = "#ffb703"; c.fillRect(0, 22, 128, 9); c.fillStyle = "#3d6fd6"; c.fillRect(0, 36, 128, 9); });
@@ -29,8 +29,8 @@ function build(touch, thi) {
   const bShadow = blob(0.4, 0.3), trail = [];
   for (let i = 0; i < 6; i++) { const t = new THREE.Mesh(ball.geometry, basic(0xff8a50, { transparent: true, opacity: 0.3 - i * 0.045, depthWrite: false })); t.scale.setScalar(0.9 - i * 0.1); sc.add(t); trail.push(t); }
   sc.add(ball, bShadow);
-  st.cam.fov = 34; st.cam.updateProjectionMatrix();
-  st.cam.position.set(0, 4.5, 15.6); st.cam.lookAt(0, 3.45, 0);
+  st.cam.fov = 30; st.cam.updateProjectionMatrix();
+  st.cam.position.set(0, 5.262, 24.0); st.cam.lookAt(0, 5.262, 0);      // z=0 면이 2D 좌표의 0.7배로 화면에 딱 겹친다 (volley.js 의 ZOOM)
   return { st, ball, bShadow, trail, hist: [], chars: [], keys: [], thi };
 }
 
