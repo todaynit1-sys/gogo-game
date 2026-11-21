@@ -1,7 +1,7 @@
 // 블록 대전 — 떨어지는 블록으로 줄을 지워 상대에게 방해 줄을 보낸다.
 // 2칸부터 4칸까지 10가지 모양, 가로 9칸 × 세로 18칸.
 
-import { startVersus } from "./versus.js?v=2";
+import { startVersus } from "./versus.js?v=3";
 import { label } from "./kit.js?v=3";
 
 const COLS = 9, ROWS = 18, HID = 3, TR = ROWS + HID;

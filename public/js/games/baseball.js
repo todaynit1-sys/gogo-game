@@ -2,6 +2,7 @@
 // 투수: 공을 겨누고 구종(직구·커브·슬라이더·체인지업)을 골라 던진다.
 // 타자: 방망이 위치를 맞추고 공이 들어오는 순간 휘두른다. 맞은 결과(안타·홈런·아웃)와 주자 진루는 저절로 계산된다.
 
+import { lazy3d } from "./lazy3d.js?v=1";
 import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_DARK, SEAT_TINT } from "./kit.js?v=3";
@@ -252,6 +253,7 @@ function drawBall(ctx, x, y, r) {
   if (r > 5) { ctx.strokeStyle = "#e8453c"; ctx.lineWidth = Math.max(1, r * 0.14); ctx.beginPath(); ctx.arc(x - r * 0.9, y, r * 0.75, -0.9, 0.9); ctx.stroke(); ctx.beginPath(); ctx.arc(x + r * 0.9, y, r * 0.75, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke(); }
 }
 
+const stage = lazy3d("./baseball3d.js?v=3");
 function drawPitchView(ctx, v, env) {
   const st = STADIUMS[v.th | 0] || STADIUMS[0], bi = v.top ? 0 : 1, pi = 1 - bi;
   ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 620, H); ctx.clip();
@@ -263,6 +265,19 @@ function drawPitchView(ctx, v, env) {
   const crowd = ["#ff9db5", "#ffc93c", "#8ecbff", "#9bd88a", "#fff", "#c3a6ff"];
   for (let r2 = 0; r2 < 4; r2++) for (let x = 6 + (r2 % 2) * 7; x < 620; x += 14) { ctx.fillStyle = crowd[(x * 7 + r2 * 3) % crowd.length]; ctx.beginPath(); ctx.arc(x, 72 + r2 * 15 + Math.sin(env.t * 4 + x) * (v.ph === 2 && HIT[v.res && v.res.kind] ? 2.5 : 0.4), 4.2, 0, 7); ctx.fill(); }
   ctx.fillStyle = "#2b2d6e"; ctx.fillRect(0, 124, 620, 8);
+  let g3 = false;
+  const m3 = stage.get();
+  if (m3) {
+    try {
+      const wind3 = v.ph === 1 && v.tm < 10 ? Math.sin((v.tm / 10) * Math.PI) : 0;
+      const ang3 = v.sw >= 0 && v.ph >= 1 ? -2.3 + clamp((v.tm - v.sw + (v.ph === 2 ? 20 : 0)) / 9, 0, 1) * 3.4 : -2.3;
+      const cv = m3.render({ t: env.t, touch: env.touch, thi: v.th | 0, st, looks: [parseLook(v.seats[pi].look, pi), parseLook(v.seats[bi].look, bi)], wind: wind3, ang: ang3 });
+      const k = cv.width / W;
+      ctx.drawImage(cv, 170 * k, 132 * k, 620 * k, (H - 132) * k, 0, 132, 620, H - 132);
+      g3 = true;
+    } catch { stage.fail(); }
+  }
+  if (!g3) {
   ctx.fillStyle = st.grass; ctx.fillRect(0, 132, 620, H);
   ctx.fillStyle = st.grass2; for (let k = 0; k < 7; k++) { ctx.beginPath(); ctx.moveTo(310, 600); ctx.lineTo(k * 100 - 40, 132); ctx.lineTo(k * 100 + 10, 132); ctx.closePath(); ctx.fill(); }
   ctx.fillStyle = st.dirt; ctx.beginPath(); ctx.moveTo(310, 150); ctx.lineTo(590, 340); ctx.lineTo(310, 560); ctx.lineTo(30, 340); ctx.closePath(); ctx.fill();
@@ -275,11 +290,12 @@ function drawPitchView(ctx, v, env) {
   const wind = v.ph === 1 && v.tm < 10 ? Math.sin((v.tm / 10) * Math.PI) : 0;
   drawMochi(ctx, 310, 168 - wind * 8, 22, parseLook(v.seats[pi].look, pi), { sq: -wind * 0.15, open: wind > 0.3 });
   ctx.strokeStyle = SEAT_DARK[pi]; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(310, 168 - wind * 8, 24, 0, 7); ctx.stroke();
+  }
   label(ctx, v.seats[pi].name + " (투수)", 310, 136, 13, "#fff", "rgba(43,45,110,.85)");
   if (v.ph >= 1 && v.kmh) label(ctx, `${PITCHES[v.pt].name} ${v.kmh}km/h`, 400, 186, 14, "#2b2d6e", "rgba(255,255,255,.9)", "left");
   // 홈 플레이트와 스트라이크 존
   ctx.fillStyle = "#fff"; ctx.strokeStyle = "#c9c2b8"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(284, 470); ctx.lineTo(336, 470); ctx.lineTo(336, 482); ctx.lineTo(310, 494); ctx.lineTo(284, 482); ctx.closePath(); ctx.fill(); ctx.stroke();
+  if (!g3) { ctx.beginPath(); ctx.moveTo(284, 470); ctx.lineTo(336, 470); ctx.lineTo(336, 482); ctx.lineTo(310, 494); ctx.lineTo(284, 482); ctx.closePath(); ctx.fill(); ctx.stroke(); }
   ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = 2.5; ctx.setLineDash([8, 6]); ctx.strokeRect(ZX0, ZY0, ZX1 - ZX0, ZY1 - ZY0); ctx.setLineDash([]);
   ctx.strokeStyle = "rgba(255,255,255,.25)"; ctx.lineWidth = 1.5;
   for (let k = 1; k < 3; k++) { ctx.beginPath(); ctx.moveTo(ZX0 + ((ZX1 - ZX0) * k) / 3, ZY0); ctx.lineTo(ZX0 + ((ZX1 - ZX0) * k) / 3, ZY1); ctx.moveTo(ZX0, ZY0 + ((ZY1 - ZY0) * k) / 3); ctx.lineTo(ZX1, ZY0 + ((ZY1 - ZY0) * k) / 3); ctx.stroke(); }
@@ -305,6 +321,7 @@ function drawPitchView(ctx, v, env) {
   const bl = parseLook(v.seats[bi].look, bi), hx = 238, hy = 402;
   let ang = -2.3;
   if (v.sw >= 0 && v.ph >= 1) ang = -2.3 + clamp((v.tm - v.sw + (v.ph === 2 ? 20 : 0)) / 9, 0, 1) * 3.4;
+  if (!g3) {
   ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.beginPath(); ctx.ellipse(214, 446, 32, 9, 0, 0, 7); ctx.fill();
   ctx.save(); ctx.translate(hx, hy); ctx.rotate(ang);
   ctx.fillStyle = "#c98a4a"; ctx.strokeStyle = "#8a5a3c"; ctx.lineWidth = 2.5; rr(ctx, 0, -5, 96, 10, 5); ctx.fill(); ctx.stroke();
@@ -312,6 +329,7 @@ function drawPitchView(ctx, v, env) {
   ctx.restore();
   drawMochi(ctx, 214, 412, 32, bl, { ang: -0.6, open: v.sw >= 0 && v.ph >= 1 });
   ctx.strokeStyle = SEAT_DARK[bi]; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(214, 412, 34, 0, 7); ctx.stroke();
+  }
   // 방망이로 맞힐 위치
   if (v.ph <= 1 && v.tick >= START) {
     ctx.strokeStyle = SEAT_DARK[bi]; ctx.lineWidth = 4; ctx.lineCap = "round";
@@ -447,7 +465,7 @@ const G = {
   cap: () => 2,
   fill: (mode, n) => (n < 2 ? 1 : 0),
   hurry: (v) => v.inn >= v.innings && !v.top && v.tick >= START,
-  init, step, bot, draw, fx, title,
+  init, step, bot, draw, fx, title, dispose: () => stage.dispose(),
 };
 
 export const meta = {

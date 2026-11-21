@@ -10,6 +10,7 @@
 //   draw(ctx, 보기용 판, x, y, cell, t, mini)   drawNext(ctx, 판, x, y, cell)
 //   bot(판, mem, level, dt)
 
+import { lazy3d } from "./lazy3d.js?v=1";
 import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, label, BOT_NAMES, emit } from "./kit.js?v=3";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 
@@ -156,6 +157,8 @@ export function startVersus(G, opts) {
   }
 
   // ── 그리기 ──
+  const stage = lazy3d("./side3d.js?v=2");      // 판 뒤에 까는 3D 옥상 배경 (가로 화면에서만)
+  let bg3 = false;
   function layout() {
     const f = focus();
     const list = f ? [f, ...seats.filter((s) => s !== f)] : [];
@@ -192,6 +195,10 @@ export function startVersus(G, opts) {
     const s = r.s, cell = r.cell, w = G.cols * cell, h = G.rows * cell;
     // 이름표
     const ns = r.mini ? Math.max(11, Math.min(17, cell * 0.95)) : 20;
+    if (bg3) {      // 3D 배경 위에서는 판 뒤에 종이 한 장을 받친다
+      ctx.fillStyle = "rgba(255,253,246,.86)"; ctx.strokeStyle = "#2b2d6e"; ctx.lineWidth = 3;
+      rr(ctx, r.x - 14, r.y - ns * 1.9 - 4, w + 28 + (r.mini ? 0 : cell * 3.5), h + ns * 1.9 + 20, 16); ctx.fill(); ctx.stroke();
+    }
     drawMochi(ctx, r.x + ns * 0.8, r.y - ns * 0.95, ns * 0.72, s.look);
     label(ctx, s.name, r.x + ns * 1.8, r.y - ns * 0.55, ns, "#2b2d6e", "#fff", "left");
     // 판
@@ -226,9 +233,16 @@ export function startVersus(G, opts) {
   function draw() {
     portrait = isPortrait(); W = portrait ? 540 : 960; H = portrait ? 720 : 540;      // 휴대폰을 돌리면 바로 배치를 바꾼다
     const ctx = fit(canvas, W, H);
+    bg3 = false;
+    if (!portrait) {
+      const m3 = stage.get();
+      if (m3) { try { const g3 = m3.open("versus", { K: 1 / 48, baseY: H, sky: G.sky || "dusk", touch: !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches), t }); g3.cheer = phase === "over"; ctx.drawImage(g3.close(), 0, 0, W, H); bg3 = true; } catch { stage.fail(); } }
+    }
+    if (!bg3) {
     ctx.fillStyle = G.bg || "#e9e4ff"; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = "rgba(43,45,110,.06)";
     for (let y = 12; y < H; y += 26) for (let x = 12 + ((y / 26) % 2) * 13; x < W; x += 26) { ctx.beginPath(); ctx.arc(x, y, 1.6, 0, 7); ctx.fill(); }
+    }
     const rects = layout();
     for (const r of rects) drawPanel(ctx, r);
     if (!rects.length) label(ctx, "다른 사람의 판을 기다리는 중…", W / 2, H / 2, 26, "#2b2d6e");
@@ -277,7 +291,7 @@ export function startVersus(G, opts) {
         else if (!r.players.some((p) => p.slot === s.slot)) s.alive = false;
       }
     },
-    stop() { stopLoop(); kb.stop(); pad.stop(); },
+    stop() { stage.dispose(); stopLoop(); kb.stop(); pad.stop(); },
     peek() { return { phase, seats: seats.map((s) => ({ slot: s.slot, kind: s.kind, alive: s.alive, filled: (s.board ? G.view(s.board) : s.view).g.replace(/0/g, "").length })) }; },
   };
 }

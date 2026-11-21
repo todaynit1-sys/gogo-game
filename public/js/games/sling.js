@@ -1,6 +1,7 @@
 // 새총 무너뜨리기 — 번갈아 새총으로 몸을 날려 성을 무너뜨리고 도깨비를 잡는다.
 // 세 판 동안 점수를 가장 많이 낸 사람이 승리.
 
+import { lazy3d } from "./lazy3d.js?v=1";
 import { startHostGame, L, R, U, D, A, P } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
@@ -239,8 +240,14 @@ function drawCell(ctx, ch, x, y, t) {
   }
 }
 
+const stage = lazy3d("./side3d.js?v=2");
+const CELL3 = { w: "#e0ab68", s: "#a3a8c8", d: "#8d92b4", g: "#aee1ff" }, GOBLIN = { ...parseLook("", 0), hex: "9b78e6" };
 function draw(ctx, v, env) {
   const sk = SKIES[v.th | 0] || SKIES[0];
+  let g3 = null;
+  const m3 = stage.get();
+  if (m3) { try { g3 = m3.open("sling", { K: 1 / 48, baseY: GY, sky: sk.night ? "night" : "dusk", mat: sk.grass[0], matD: 8, touch: env.touch, t: env.t }); } catch { g3 = null; stage.fail(); } }
+  if (!g3) {
   const g = ctx.createLinearGradient(0, 0, 0, GY);
   g.addColorStop(0, sk.sky[0]); g.addColorStop(1, sk.sky[1]);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -253,12 +260,32 @@ function draw(ctx, v, env) {
   ctx.fillStyle = sk.grass[1]; ctx.fillRect(0, GY, W, 7);
   // 성
   for (let r = 0; r < NR; r++) for (let c = 0; c < NCc; c++) { const ch = cellAt(v.g, c, r); if (ch !== "0") drawCell(ctx, ch, X0 + c * CS, GY - (r + 1) * CS, env.t); }
+  }
 
   const aiming = v.ph === 0 && v.tick >= START && !v.over, p = v.p[v.turn];
   const px = aiming ? SX - p.ax * 0.5 : SX, py = aiming ? SY - p.ay * 0.5 : SY;
+  if (g3) {
+    try {
+      for (let r = 0; r < NR; r++) for (let c = 0; c < NCc; c++) {
+        const ch = cellAt(v.g, c, r); if (ch === "0") continue;
+        const cx = X0 + c * CS + CS / 2, cy = GY - (r + 0.5) * CS;
+        if (ch === "t") g3.mochi(100 + r * NCc + c, GOBLIN, cx, GY - r * CS, { r: 14, yaw: -0.5, squash: Math.sin(env.t * 5 + c) * 0.04 });
+        else g3.block(r * NCc + c, cx, cy, CS - 2, CS - 2, { color: CELL3[ch] || "#e0ab68", depth: 34, opacity: ch === "g" ? 0.55 : null });
+      }
+      g3.rod("a", SX, GY, SX, SY + 26, { w: 11, color: "#8a5a3c" }); g3.rod("b", SX, SY + 26, SX - 16, SY - 8, { w: 10, color: "#8a5a3c" }); g3.rod("c", SX, SY + 26, SX + 16, SY - 8, { w: 10, color: "#8a5a3c" });
+      v.seats.forEach((seat, i) => { if (!(i === v.turn && !v.over)) g3.mochi(i, parseLook(seat.look, i), 36 + i * 30, GY, { r: 14, yaw: 0.5 }); });
+      if (!v.over) {
+        const look = parseLook(v.seats[v.turn].look, v.turn);
+        if (v.shot) { const q = env.prev && env.prev.shot, x = q ? q.x + (v.shot.x - q.x) * env.alpha : v.shot.x, y = q ? q.y + (v.shot.y - q.y) * env.alpha : v.shot.y; g3.mochi("s", look, x, y + BRD, { r: BRD, yaw: 0.6, tilt: -Math.atan2(v.shot.vy, v.shot.vx), z: 0.3 }); }
+        else if (v.ph === 0) g3.mochi("s", look, px, py + BRD, { r: BRD, yaw: 0.6, z: 0.3 });
+      }
+      g3.cheer = !!v.over;
+      ctx.drawImage(g3.close(), 0, 0, W, H);
+    } catch { g3 = null; stage.fail(); }
+  }
   // 새총
   ctx.strokeStyle = "#8a5a3c"; ctx.lineWidth = 11; ctx.lineCap = "round";
-  ctx.beginPath(); ctx.moveTo(SX, GY); ctx.lineTo(SX, SY + 26); ctx.lineTo(SX - 16, SY - 8); ctx.moveTo(SX, SY + 26); ctx.lineTo(SX + 16, SY - 8); ctx.stroke();
+  if (!g3) { ctx.beginPath(); ctx.moveTo(SX, GY); ctx.lineTo(SX, SY + 26); ctx.lineTo(SX - 16, SY - 8); ctx.moveTo(SX, SY + 26); ctx.lineTo(SX + 16, SY - 8); ctx.stroke(); }
   if (aiming) {
     ctx.strokeStyle = "#5a3323"; ctx.lineWidth = 5;
     ctx.beginPath(); ctx.moveTo(SX - 16, SY - 8); ctx.lineTo(px, py); ctx.lineTo(SX + 16, SY - 8); ctx.stroke();
@@ -269,7 +296,7 @@ function draw(ctx, v, env) {
   }
   // 기다리는 선수들
   v.seats.forEach((seat, i) => {
-    if (i === v.turn && !v.over) return;
+    if (g3 || (i === v.turn && !v.over)) return;
     drawMochi(ctx, 36 + i * 30, GY - 15, 14, parseLook(seat.look, i));
   });
   // 날아가는(또는 새총에 걸린) 선수
@@ -283,8 +310,8 @@ function draw(ctx, v, env) {
     if (v.shot) {
       const q = env.prev && env.prev.shot, x = q ? q.x + (v.shot.x - q.x) * env.alpha : v.shot.x, y = q ? q.y + (v.shot.y - q.y) * env.alpha : v.shot.y;
       halo(x, y, v.shot.k);
-      drawMochi(ctx, x, y, BRD, look, { ang: Math.atan2(v.shot.vy, v.shot.vx), open: true });
-    } else if (v.ph === 0) { halo(px, py, kindOf(p)); drawMochi(ctx, px, py, BRD, look, { ang: Math.atan2(p.ay, p.ax), sq: aiming ? -0.08 : 0 }); }
+      if (!g3) drawMochi(ctx, x, y, BRD, look, { ang: Math.atan2(v.shot.vy, v.shot.vx), open: true });
+    } else if (v.ph === 0) { halo(px, py, kindOf(p)); if (!g3) drawMochi(ctx, px, py, BRD, look, { ang: Math.atan2(p.ay, p.ax), sq: aiming ? -0.08 : 0 }); }
   }
   // 폭발
   for (const e of v.ex || []) {
@@ -345,7 +372,7 @@ const G = {
   W, H, sendEvery: 2, action: null, overDelay: 220, pointer: true, noPad: true,
   bots: { solo: 1, local: 0 },
   fill: (mode, n) => (n < 2 ? 1 : 0),
-  init, step, bot, draw, fx, title,
+  init, step, bot, draw, fx, title, dispose: () => stage.dispose(),
 };
 
 export const meta = {

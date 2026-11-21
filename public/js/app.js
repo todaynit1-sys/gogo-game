@@ -23,7 +23,7 @@ let soloMode = 0;         // 혼자·한 키보드에서 고른 경기 방식(�
 let gameId = null, sawLobby = false, overPending = false;
 
 // 게임 모듈은 고를 때 불러온다
-const VER = "?v=36";
+const VER = "?v=42";
 const mods = {};
 const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" + VER));
 

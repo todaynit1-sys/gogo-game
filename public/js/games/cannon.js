@@ -1,6 +1,7 @@
 // 쾅쾅 포격전 — 번갈아 가며 각도와 힘을 맞춰 포탄을 쏜다. 땅이 파이고, 바람이 분다.
 // 포탄 다섯 가지, 판마다 다른 지형과 하늘. 마지막까지 버틴 사람이 승리.
 
+import { lazy3d } from "./lazy3d.js?v=1";
 import { startHostGame, L, R, U, D, A, B } from "./hostgame.js?v=4";
 import { drawMochi, parseLook } from "../avatar.js?v=3";
 import { rr, label, jingle, SEAT_DARK } from "./kit.js?v=3";
@@ -282,8 +283,27 @@ function bot(s, i, mem, level) {
 }
 
 // ── 그리기 ──
+const stage = lazy3d("./side3d.js?v=2");
 function draw(ctx, v, env) {
   const th = THEMES[v.th] || THEMES[0];
+  let g3 = null;
+  const m3 = stage.get();
+  if (m3) {
+    try {
+      g3 = m3.open("cannon", { K: 1 / 48, baseY: H, sky: th.stars ? "night" : th.name === "노을" ? "dusk" : "day", touch: env.touch, t: env.t });
+      g3.terrain(v.h, COLW, { soil: th.soil[0], grass: th.grass });
+      v.p.forEach((p, i) => {
+        if (!p.al) return;
+        const q0 = env.prev && env.prev.p[i], x = q0 ? q0.x + (p.x - q0.x) * env.alpha : p.x, y = q0 && q0.y != null ? q0.y + (p.y - q0.y) * env.alpha : p.y, r = (p.el * Math.PI) / 180;
+        g3.block(i, x, y - 5, 42, 12, { color: "#2b2d6e", depth: 30 });
+        g3.rod(i, x, y - 18, x + Math.cos(r) * 28 * p.f, y - 18 - Math.sin(r) * 28, { w: 9, color: "#39406e", z: 0.25 });
+        g3.mochi(i, parseLook(v.seats[i].look, i), x, y - 9, { r: 16, yaw: p.f > 0 ? 0.75 : -0.75 });
+      });
+      g3.cheer = !!v.over;
+      ctx.drawImage(g3.close(), 0, 0, W, H);
+    } catch { g3 = null; stage.fail(); }
+  }
+  if (!g3) {
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, th.sky[0]); g.addColorStop(1, th.sky[1]);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -310,6 +330,7 @@ function draw(ctx, v, env) {
   for (let i = 0; i < NC; i++) { if (v.h[i] >= VOID_Y) { pen = false; continue; } if (pen) ctx.lineTo(i * COLW, v.h[i]); else { ctx.moveTo(i * COLW, v.h[i]); pen = true; } }
   ctx.strokeStyle = th.grass; ctx.lineWidth = 9; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
   ctx.strokeStyle = th.edge; ctx.lineWidth = 2; ctx.stroke();
+  }
   ctx.fillStyle = "rgba(255,93,115,.75)";      // 구멍 바닥에 빨간 경고 줄
   for (let i = 0; i < NC; i++) if (v.h[i] >= VOID_Y && (i + Math.floor(env.t * 6)) % 4 < 2) ctx.fillRect(i * COLW, H - 5, COLW, 5);
 
@@ -325,11 +346,13 @@ function draw(ctx, v, env) {
   v.p.forEach((p, i) => {
     if (!p.al) return;
     const q0 = env.prev && env.prev.p[i], x = q0 ? q0.x + (p.x - q0.x) * env.alpha : p.x, y = q0 && q0.y != null ? q0.y + (p.y - q0.y) * env.alpha : p.y, r = (p.el * Math.PI) / 180;
+    if (!g3) {
     ctx.strokeStyle = "#2b2d6e"; ctx.lineWidth = 8; ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(x + Math.cos(r) * 26 * p.f, y - 18 - Math.sin(r) * 26); ctx.stroke();
     ctx.fillStyle = "#2b2d6e"; rr(ctx, x - 20, y - 10, 40, 12, 6); ctx.fill();
     ctx.fillStyle = "#54609e"; ctx.beginPath(); ctx.arc(x - 12, y - 2, 5, 0, 7); ctx.arc(x, y - 2, 5, 0, 7); ctx.arc(x + 12, y - 2, 5, 0, 7); ctx.fill();
     drawMochi(ctx, x, y - 22, 15, parseLook(v.seats[i].look, i), { ang: p.f > 0 ? -0.3 : Math.PI + 0.3 });
+    }
     if (p.sd) { ctx.strokeStyle = "rgba(110,198,255,.95)"; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(x, y - 18, 27 + Math.sin(env.t * 6) * 1.5, 0, 7); ctx.stroke(); }      // 방패
     ctx.fillStyle = "rgba(43,45,110,.85)"; rr(ctx, x - 24, y - 60, 48, 9, 4); ctx.fill();
     ctx.fillStyle = p.hp > MAXHP * 0.5 ? "#7ddc7a" : p.hp > MAXHP * 0.25 ? "#ffc93c" : "#ff5d73"; rr(ctx, x - 22, y - 58, Math.max(2, 44 * p.hp / MAXHP), 5, 2.5); ctx.fill();
@@ -427,7 +450,7 @@ const G = {
   W, H, sendEvery: 3, action: "발사", action2: "포탄", overDelay: 220,
   bots: { solo: 1, local: 0 },
   fill: (mode, n) => (n < 2 ? 1 : 0),
-  init, step, bot, draw, fx, title, pack, unpack,
+  init, step, bot, draw, fx, title, pack, unpack, dispose: () => stage.dispose(),
 };
 
 export const meta = {
