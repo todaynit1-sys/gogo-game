@@ -116,6 +116,9 @@ let prefPortrait = false, rotDismissed = false;
 function afterStart(mod) {
   $("v-play").classList.toggle("nopad", !$("touch").children.length);
   prefPortrait = !!mod.meta.portrait;
+  $("rotLock").hidden = false;
+  // 이미 전체 화면이면 게임에 맞는 방향으로 다시 잠근다
+  if (document.fullscreenElement && screen.orientation && screen.orientation.lock) screen.orientation.lock(prefPortrait ? "portrait" : "landscape").catch(() => {});
   updateRotTip();
 }
 function updateRotTip() {
@@ -123,8 +126,24 @@ function updateRotTip() {
   if (!tip) return;
   const portraitNow = window.innerHeight > window.innerWidth;
   const show = coarse() && !rotDismissed && !$("v-play").hidden && portraitNow !== prefPortrait;
-  tip.hidden = !show;
-  if (show) $("rotText").textContent = prefPortrait ? "세로로 들면 판이 더 크게 보여요" : "가로로 돌리면 더 크게 즐길 수 있어요";
+  tip.hidden = true;      // 작은 안내 대신 화면을 덮는 안내를 쓴다
+  const gate = $("rotGate");
+  gate.hidden = !show; gate.classList.toggle("to-portrait", prefPortrait);
+  if (show) {
+    $("rotGateTitle").textContent = prefPortrait ? "휴대폰을 세로로 세워 주세요" : "휴대폰을 가로로 돌려 주세요";
+    $("rotGateText").textContent = prefPortrait ? "이 게임은 세로 화면에서 판이 훨씬 크게 보여요." : "이 게임은 가로 화면에서 훨씬 크게 보이고 조작도 편해요.";
+    $("rotLock").textContent = prefPortrait ? "세로로 고정하기" : "가로로 고정하기";
+  }
+}
+// 버튼으로 방향 고정: 전체 화면으로 바꾼 뒤 잠근다(안드로이드). 아이폰은 잠글 수 없어 직접 돌려야 한다.
+async function lockOrientation() {
+  let ok = false;
+  try {
+    if (!document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+    if (screen.orientation && screen.orientation.lock) { await screen.orientation.lock(prefPortrait ? "portrait" : "landscape"); ok = true; }
+  } catch {}
+  if (!ok) { $("rotGateText").textContent = "이 휴대폰은 자동으로 돌릴 수 없어요. 화면 회전 잠금을 풀고 직접 " + (prefPortrait ? "세워" : "돌려") + " 주세요."; $("rotLock").hidden = true; }
+  updateRotTip();
 }
 function leaveFullscreen() {
   try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch {}
@@ -567,6 +586,8 @@ function init() {
   });
   window.addEventListener("resize", updateRotTip);
   $("rotClose").addEventListener("click", () => { rotDismissed = true; updateRotTip(); });
+  $("rotSkip").addEventListener("click", () => { rotDismissed = true; updateRotTip(); });
+  $("rotLock").addEventListener("click", lockOrientation);
   $("fsBtn").hidden = !(document.fullscreenEnabled && coarse());
   $("fsBtn").addEventListener("click", toggleFullscreen);
   document.addEventListener("fullscreenchange", () => { $("fsBtn").textContent = document.fullscreenElement ? "원래 화면" : "전체 화면"; });
