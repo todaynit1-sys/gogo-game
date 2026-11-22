@@ -253,7 +253,7 @@ function drawBall(ctx, x, y, r) {
   if (r > 5) { ctx.strokeStyle = "#e8453c"; ctx.lineWidth = Math.max(1, r * 0.14); ctx.beginPath(); ctx.arc(x - r * 0.9, y, r * 0.75, -0.9, 0.9); ctx.stroke(); ctx.beginPath(); ctx.arc(x + r * 0.9, y, r * 0.75, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke(); }
 }
 
-const stage = lazy3d("./baseball3d.js?v=3");
+const stage = lazy3d("./baseball3d.js?v=4");
 function drawPitchView(ctx, v, env) {
   const st = STADIUMS[v.th | 0] || STADIUMS[0], bi = v.top ? 0 : 1, pi = 1 - bi;
   ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 620, H); ctx.clip();

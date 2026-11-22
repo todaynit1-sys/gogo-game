@@ -1,5 +1,5 @@
 // 떡 야구의 3D 구장 — 포수 뒤 높은 자리에서 본 내야. 스트라이크 존·공·글자는 2D 로 그 위에 얹는다.
-import { THREE, createStage, makeMochi, mat, box, mesh, blob } from "./stage3d.js?v=1";
+import { THREE, createStage, makeMochi, mat, box, mesh, blob } from "./stage3d.js?v=2";
 
 let S = null;
 const MOUND = -14, HOME = [0, 0], BAT = [-2.0, -1.3];

@@ -1,5 +1,5 @@
 // 폭탄 미로의 3D 무대
-import { THREE, createStage, makeMochi, addMochi, removeMochi, moveMochi, mat, basic, box, mesh, canvasTex, blob } from "./stage3d.js?v=1";
+import { THREE, createStage, makeMochi, addMochi, removeMochi, moveMochi, mat, basic, box, mesh, canvasTex, blob } from "./stage3d.js?v=2";
 import { parseLook } from "../avatar.js?v=3";
 
 const GW = 15, GH = 11, N = GW * GH, X = (x) => x - 7, Z = (y) => y - 5;

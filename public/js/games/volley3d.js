@@ -1,5 +1,5 @@
 // 통통 배구의 3D 무대 — 옆에서 보는 옥상 코트
-import { THREE, createStage, makeMochi, addMochi, removeMochi, mat, basic, box, mesh, canvasTex, blob } from "./stage3d.js?v=1";
+import { THREE, createStage, makeMochi, addMochi, removeMochi, mat, basic, box, mesh, canvasTex, blob } from "./stage3d.js?v=2";
 
 const K = 1 / 60, GROUND = 470, PR = 40, NET_H = 165 * K, X = (x) => (x - 480) * K, Y = (y) => (GROUND - y) * K;
 const SKY = ["day", "dusk", "night", "dusk"], FLOOR = [0xf1d49a, 0xe9b77c, 0x8f93c4, 0xdba266], EDGE = [0x3f9fd8, 0xd9774f, 0x5a5fa8, 0x3f8f86];

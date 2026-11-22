@@ -148,7 +148,7 @@ function bot(s, i, mem, level) {
 }
 
 // ── 그리기 ──
-const stage = lazy3d("./soccer3d.js?v=3");
+const stage = lazy3d("./soccer3d.js?v=4");
 function draw(ctx, v, env) {
   const fd = FIELDS[v.th | 0] || FIELDS[0];
   let d3 = null;

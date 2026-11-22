@@ -283,7 +283,7 @@ function bot(s, i, mem, level) {
 }
 
 // ── 그리기 ──
-const stage = lazy3d("./side3d.js?v=2");
+const stage = lazy3d("./side3d.js?v=3");
 function draw(ctx, v, env) {
   const th = THEMES[v.th] || THEMES[0];
   let g3 = null;

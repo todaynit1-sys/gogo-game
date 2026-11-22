@@ -6,7 +6,7 @@ import { drawMochi as paintMochi, parseLook } from "../avatar.js?v=3";
 import { sound, jingle, makeLoop, fit, keyboard, touchPad, rr, BOT_NAMES, SEAT_DARK, emit } from "./kit.js?v=3";
 
 import { lazy3d } from "./lazy3d.js?v=1";
-const stage = lazy3d("./volley3d.js?v=2");
+const stage = lazy3d("./volley3d.js?v=3");
 
 const W = 960, H = 540, GROUND = 470, NET_X = 480, NET_HW = 7, NET_TOP = GROUND - 165;
 const PR = 40, BR = 24, DT = 1 / 60;

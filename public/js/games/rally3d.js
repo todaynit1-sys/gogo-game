@@ -3,6 +3,7 @@
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js";
 import { parseLook, bodyColors } from "../avatar.js?v=3";
+import { makeMochi, kit } from "./stage3d.js?v=2";
 
 const CW = 3, CL = 6.6, NET = 0.95;
 let R = null;      // { renderer, scene, cam, ... }
@@ -69,7 +70,10 @@ function build(touch) {
   // ── 소품 ──
   const greens = [mat(0x5fae5a, 0.9, { flatShading: true }), mat(0x3f8f5a, 0.9, { flatShading: true }), mat(0x86c56a, 0.9, { flatShading: true })];
   const potM = mat(0xc9653e), ico = new THREE.IcosahedronGeometry(1, 1), potG = new THREE.CylinderGeometry(0.38, 0.27, 0.55, 12);
+  let plantN = 0;
   const plant = (x, z, s = 1) => {
+    const kp = kit(["plant_a", "plant_c", "plant_b"][plantN++ % 3]);
+    if (kp) { kp.position.set(x, 0, z); kp.scale.setScalar(s * 1.05); scene.add(kp); return; }
     const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(s);
     g.add(mesh(potG, potM, 0, 0.28, 0));
     for (let i = 0; i < 4; i++) { const r = 0.3 + rng() * 0.22, m = mesh(ico, greens[i % 3], (rng() - 0.5) * 0.5, 0.75 + rng() * 0.45, (rng() - 0.5) * 0.5); m.scale.setScalar(r); g.add(m); }
@@ -148,6 +152,7 @@ function build(touch) {
 
 // 떡 선수: 앞(+z)을 보는 모양으로 만들고 통째로 돌린다
 function makeChar(look) {
+  if (kit("mochi")) { const k = makeMochi(look, { cap: true, racket: true }); return { g: k.g, body: k.body, arm: k.arm, px: 0, pz: 0, run: 0 }; }      // 블렌더 모델
   const c = bodyColors(look), g = new THREE.Group(), body = new THREE.Group();
   const skin = mat(c.body, 0.55), dark = mat(c.dark, 0.7), ink = new THREE.MeshBasicMaterial({ color: 0x2b2d4e });
   const b = mesh(new THREE.SphereGeometry(0.66, 24, 18), skin, 0, 0.64, 0, true, false); b.scale.set(1, 0.92, 1); body.add(b);

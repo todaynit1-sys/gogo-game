@@ -157,7 +157,7 @@ export function startVersus(G, opts) {
   }
 
   // ── 그리기 ──
-  const stage = lazy3d("./side3d.js?v=2");      // 판 뒤에 까는 3D 옥상 배경 (가로 화면에서만)
+  const stage = lazy3d("./side3d.js?v=3");      // 판 뒤에 까는 3D 옥상 배경 (가로 화면에서만)
   let bg3 = false;
   function layout() {
     const f = focus();

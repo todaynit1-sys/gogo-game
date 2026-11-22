@@ -5,6 +5,31 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.m
 import { bodyColors } from "../avatar.js?v=3";
 export { THREE };
 
+// 블렌더로 만든 모델 묶음 (tools/blender/make_kit.py → public/models/kit.glb). 못 불러오면 예전처럼 코드로 만든 모양을 쓴다.
+let KIT = null;
+try {
+  const { GLTFLoader } = await import("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js");
+  const gltf = await new GLTFLoader().loadAsync("/models/kit.glb?v=1");
+  KIT = {};
+  for (const o of gltf.scene.children) KIT[o.name] = o;
+  gltf.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+} catch { KIT = null; }
+// 모델 하나 꺼내기(같은 모양·재질을 나눠 쓰는 복사본). 없으면 null
+export function kit(name) { return KIT && KIT[name] ? KIT[name].clone(true) : null; }
+const tintCache = new Map();
+// 떡 모델의 몸 색 바꾸기: 재질 "body"·"dark" 를 색별로 하나씩 만들어 갈아 끼운다
+function recolor(o, body, dark) {
+  o.traverse((m) => {
+    if (!m.isMesh || !m.material) return;
+    const col = m.material.name === "body" ? body : m.material.name === "dark" ? dark : null;
+    if (col == null) return;
+    const key = m.material.name + "|" + col;
+    if (!tintCache.has(key)) { const c = m.material.clone(); c.color.set(col); tintCache.set(key, c); }
+    m.material = tintCache.get(key);
+  });
+  return o;
+}
+
 export const LW = 960, LH = 540;      // 2D 화면 크기(점수판·이름표를 얹을 좌표)
 export const mat = (color, rough = 0.85, extra) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0, ...extra });
 export const basic = (color, extra) => new THREE.MeshBasicMaterial({ color, ...extra });
@@ -62,7 +87,10 @@ export function createStage({ touch = false, roofW = 26, roofD = 22, sky = "dusk
   // 화분
   const greens = [mat(0x5fae5a, 0.9, { flatShading: true }), mat(0x3f8f5a, 0.9, { flatShading: true }), mat(0x86c56a, 0.9, { flatShading: true })];
   const potM = mat(0xc9653e), ico = new THREE.IcosahedronGeometry(1, 1), potG = new THREE.CylinderGeometry(0.38, 0.27, 0.55, 12);
+  let plantN = 0;
   const plant = (x, z, s = 1) => {
+    const k = kit(["plant_a", "plant_c", "plant_b"][plantN++ % 3]);
+    if (k) { k.position.set(x, 0, z); k.scale.setScalar(s * 1.05); k.rotation.y = rng() * 6.28; scene.add(k); return; }
     const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(s);
     g.add(mesh(potG, potM, 0, 0.28, 0));
     for (let i = 0; i < 4; i++) { const m = mesh(ico, greens[i % 3], (rng() - 0.5) * 0.5, 0.75 + rng() * 0.45, (rng() - 0.5) * 0.5); m.scale.setScalar(0.3 + rng() * 0.22); g.add(m); }
@@ -77,9 +105,19 @@ export function createStage({ touch = false, roofW = 26, roofD = 22, sky = "dusk
     const cols = [0xff9db5, 0x9bd88a, 0xffd66b, 0xa9c8ff, 0xc3a6ff, 0xffb37a, 0x8fe0d2, 0xf7f1e3];
     for (let x0 = -hw + 4.4; x0 <= hw - 4.3; x0 += 3.7) {
       const z0 = -hd + 1.5;
-      scene.add(mesh(box(3, 0.12, 0.6), wood, x0, 0.42, z0), mesh(box(0.1, 0.42, 0.1), wood, x0 - 1.3, 0.21, z0), mesh(box(0.1, 0.42, 0.1), wood, x0 + 1.3, 0.21, z0));
+      const kb = kit("bench");
+      if (kb) { kb.position.set(x0, 0, z0); scene.add(kb); }
+      else scene.add(mesh(box(3, 0.12, 0.6), wood, x0, 0.42, z0), mesh(box(0.1, 0.42, 0.1), wood, x0 - 1.3, 0.21, z0), mesh(box(0.1, 0.42, 0.1), wood, x0 + 1.3, 0.21, z0));
       for (let j = 0; j < 3; j++) {
         if (rng() < 0.18) continue;
+        const km = kit("mochi");
+        if (km) {
+          const col = new THREE.Color(cols[(rng() * cols.length) | 0]);
+          recolor(km, "#" + col.getHexString(), "#" + col.clone().multiplyScalar(0.72).getHexString());
+          km.scale.setScalar(0.62); km.position.set(x0 - 1 + j, 0.48, z0 + 0.02); km.rotation.y = (rng() - 0.5) * 0.5; scene.add(km);
+          fanList.push({ g: km, y: 0.48, ph: rng() * 6.28, sp: 2.4 + rng() * 1.6 });
+          continue;
+        }
         const g = new THREE.Group(), b = mesh(fanG, mat(cols[(rng() * cols.length) | 0], 0.6), 0, 0, 0, true, false);
         b.scale.set(1, 0.9, 1); g.add(b);
         for (const e of [-1, 1]) { const eye = new THREE.Mesh(eyeG, ink); eye.position.set(e * 0.15, 0.08, 0.38); g.add(eye); }
@@ -92,7 +130,7 @@ export function createStage({ touch = false, roofW = 26, roofD = 22, sky = "dusk
   const bulbG = new THREE.SphereGeometry(0.1, 8, 6), bulbM = basic(0xfff2b8, { fog: false }), flagG = new THREE.ConeGeometry(0.19, 0.38, 3);
   const flagM = [0xff5d73, 0xffc93c, 0x4fa798, 0xfff8ea, 0x7b8fc0].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, side: THREE.DoubleSide }));
   const corners = [[-hw + 0.9, -hd + 0.9], [hw - 0.9, -hd + 0.9], [hw - 0.9, hd - 0.9], [-hw + 0.9, hd - 0.9]], wire = new THREE.LineBasicMaterial({ color: 0x4a4466 });
-  for (const [x, z] of corners) scene.add(mesh(new THREE.CylinderGeometry(0.06, 0.08, 4.1, 8), post, x, 2.05, z));
+  for (const [x, z] of corners) { const kp = kit("pole"); if (kp) { kp.position.set(x, 0, z); scene.add(kp); } else scene.add(mesh(new THREE.CylinderGeometry(0.06, 0.08, 4.1, 8), post, x, 2.05, z)); }
   for (let c = 0; c < 3; c++) {      // 가까운 쪽(카메라 앞)은 비워 둔다
     const [x0, z0] = corners[(c + 3) % 4], [x1, z1] = corners[c], len = Math.hypot(x1 - x0, z1 - z0), n = Math.round(len / 0.95), pts = [];
     for (let i = 0; i <= n; i++) {
@@ -108,8 +146,28 @@ export function createStage({ touch = false, roofW = 26, roofD = 22, sky = "dusk
   const tint = sky === "night" ? ["#5a5a96", "#4a4a86", "#6a5a96", "#54609a", "#48487c"] : sky === "day" ? ["#f1e4d0", "#e3d2c4", "#d4dcea", "#f6ead2", "#d9c9d2"] : ["#eeb690", "#dc9c88", "#c98d95", "#f3cba2", "#b98aa0"];
   const cityM = tint.map((c, i) => { const t = winTex(c, SKY.lit + (i % 2) * 0.1); return new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: SKY.glow, roughness: 0.9 }); });
   const r0 = Math.hypot(hw, hd) + 9;
+  const BL = [["bldg_a", 7, 6, 22], ["bldg_b", 9, 7, 15], ["bldg_c", 6, 6, 30], ["bldg_d", 11, 8, 11]], baseM = mat(sky === "night" ? 0x4a4a86 : 0xc98d7c, 0.95);
+  if (KIT && KIT.bldg_a) KIT.bldg_a.traverse((o) => { if (o.isMesh && o.material.name === "win_on") o.material.emissiveIntensity = sky === "night" ? 3.2 : sky === "day" ? 0.25 : 1.8; });
+  // 바로 뒤 낮은 옥상: 옥탑·물탱크·실외기·파라솔 (배경 살림)
+  if (kit("hut")) {
+    const ny = -1.3, nz = -hd - 6.2, nw = Math.max(20, roofW * 0.85);
+    scene.add(mesh(box(nw, 3, 10), mat(0xcfa888), 0, ny - 1.5, nz, false), mesh(box(nw + 0.4, 0.5, 10.4), mat(0xb98a6c), 0, ny - 0.1, nz, false));
+    const put = (name, x, z, ry = 0, s = 1) => { const o = kit(name); if (!o) return; o.position.set(x, ny + 0.15, nz + z); o.rotation.y = ry; o.scale.setScalar(s); scene.add(o); };
+    put("hut", -nw * 0.24, -1.2); put("tank", nw * 0.26, -1.0, 0.4); put("ac", nw * 0.02, -2.6); put("ac", nw * 0.02 + 1.7, -2.6);
+    put("parasol", -nw * 0.02, 2.2, 0.3); put("crate", nw * 0.42, 2.6, 0.3); put("crate", nw * 0.42 - 1.05, 2.9, -0.2); put("crate", nw * 0.42 - 0.5, 2.7, 0.5, 0.8);
+    put("plant_a", -nw * 0.44, 2.8, 0, 1.4); put("plant_b", nw * 0.13, 3.2, 0, 1.3); put("plant_c", -nw * 0.1, -3.4, 0, 1.2);
+  }
   for (let i = 0; i < 64; i++) {
     const a = (i / 64) * Math.PI * 2 + rng() * 0.08, r = r0 + rng() * 34, w = 4 + rng() * 6, d = 4 + rng() * 6, top = -6 + rng() * (r > r0 + 18 ? 24 : 12);
+    const kbd = kit(BL[i % 4][0]);
+    if (kbd) {
+      const [, bw, bd, bh] = BL[i % 4], s = 0.85 + rng() * 0.5, x = Math.cos(a) * r, z = Math.sin(a) * r, ry = ((rng() * 4) | 0) * (Math.PI / 2) + (rng() - 0.5) * 0.5;
+      kbd.scale.setScalar(s); kbd.position.set(x, top - bh * s, z); kbd.rotation.y = ry;
+      kbd.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+      const base = mesh(box(bw * s, 50, bd * s), baseM, x, top - bh * s - 25, z, false, false); base.rotation.y = ry;
+      scene.add(kbd, base);
+      continue;
+    }
     const b = mesh(box(w, top + 46, d), cityM[i % 5], Math.cos(a) * r, (top - 46) / 2, Math.sin(a) * r, false, false);
     b.rotation.y = rng() * 0.6; scene.add(b);
   }
@@ -142,6 +200,18 @@ export function createStage({ touch = false, roofW = 26, roofD = 22, sky = "dusk
 export function makeMochi(look, opts = {}) {
   const r = opts.r || 0.66, k = r / 0.66, c = bodyColors(look), g = new THREE.Group(), body = new THREE.Group();
   body.scale.setScalar(k);
+  const km = kit("mochi");
+  if (km) {      // 블렌더 모델
+    body.add(recolor(km, c.body, c.dark));
+    if (opts.cap) { const cp = kit("cap"); if (cp) body.add(recolor(cp, c.body, c.dark)); }
+    let arm = null;
+    if (opts.racket) { arm = new THREE.Group(); arm.position.set(-0.7, 0.6, 0.12); const rk = kit("racket"); if (rk) arm.add(rk); body.add(arm); }
+    g.add(body);
+    const shadow = blob(r * 0.95, 0.28);
+    let ring = null;
+    if (opts.ring != null) { ring = new THREE.Mesh(new THREE.RingGeometry(r * 1.12, r * 1.36, 28).rotateX(-Math.PI / 2), basic(opts.ring, { transparent: true, opacity: 0.95, depthWrite: false })); ring.position.y = 0.05; }
+    return { g, body, arm, shadow, ring, px: 0, pz: 0, run: 0, yaw: 0 };
+  }
   const skin = mat(c.body, 0.55), dark = mat(c.dark, 0.7), ink = basic(0x2b2d4e);
   const b = mesh(new THREE.SphereGeometry(0.66, 24, 18), skin, 0, 0.64, 0, true, false); b.scale.set(1, 0.92, 1); body.add(b);
   for (const e of [-1, 1]) {

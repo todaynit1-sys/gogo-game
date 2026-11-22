@@ -5,7 +5,7 @@
 //   g.mochi(id, look, x, y, {...}); g.ball(id, x, y, {...}); g.disc(...); g.block(...); g.pin(...)
 //   const cv = g.close();  ← 3D 로 그린 캔버스.  g.at(x, y, h) → 화면 좌표,  g.pick(sx, sy) → 판 좌표
 
-import { THREE, createStage, makeMochi, addMochi, removeMochi, mat, basic, box, mesh, canvasTex, blob, LW, LH } from "./stage3d.js?v=1";
+import { kit, THREE, createStage, makeMochi, addMochi, removeMochi, mat, basic, box, mesh, canvasTex, blob, LW, LH } from "./stage3d.js?v=2";
 
 let S = null;
 
@@ -113,8 +113,9 @@ const handle = {
   pin(id, x, y, o = {}) {
     const r = (o.r || 9) * S.K, sig = r.toFixed(3);
     const p = piece("p" + id, sig, () => {
-      const g = new THREE.Group(), white = mat(0xfffdf6, 0.4), red = mat(0xff5d73, 0.5);
-      g.add(mesh(new THREE.CylinderGeometry(r * 0.55, r, r * 2.2, 14), white, 0, r * 1.1, 0, true, false), mesh(new THREE.SphereGeometry(r * 0.95, 14, 10), white, 0, r * 1.5, 0, true, false), mesh(new THREE.CylinderGeometry(r * 0.5, r * 0.56, r * 0.5, 14), red, 0, r * 2.6, 0, false, false), mesh(new THREE.SphereGeometry(r * 0.62, 14, 10), white, 0, r * 3.2, 0, true, false));
+      const g = new THREE.Group(), white = mat(0xfffdf6, 0.4), red = mat(0xff5d73, 0.5), kp = kit("pin");
+      if (kp) { kp.scale.setScalar(r * 4.6); g.add(kp); }
+      else g.add(mesh(new THREE.CylinderGeometry(r * 0.55, r, r * 2.2, 14), white, 0, r * 1.1, 0, true, false), mesh(new THREE.SphereGeometry(r * 0.95, 14, 10), white, 0, r * 1.5, 0, true, false), mesh(new THREE.CylinderGeometry(r * 0.5, r * 0.56, r * 0.5, 14), red, 0, r * 2.6, 0, false, false), mesh(new THREE.SphereGeometry(r * 0.62, 14, 10), white, 0, r * 3.2, 0, true, false));
       const sh = blob(r * 1.1, 0.25);
       return { g, sh, objs: [g, sh], tilt: 0 };
     });

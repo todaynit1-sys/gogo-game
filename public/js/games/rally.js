@@ -186,7 +186,7 @@ let stage = null, stageOn = false, stageErr = false;
 function loadStage() {
   if (stage || stageOn || stageErr || typeof document === "undefined") return;
   stageOn = true;
-  import("./rally3d.js?v=3").then((m) => { stage = m; }).catch(() => { stageErr = true; });
+  import("./rally3d.js?v=4").then((m) => { stage = m; }).catch(() => { stageErr = true; });
 }
 const mix = (a, b, t) => a + (b - a) * t;
 function landing(v) {      // 공이 떨어질 자리 (네트에 걸릴 공이면 없음)

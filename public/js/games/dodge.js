@@ -227,7 +227,7 @@ function heart(ctx, x, y, s, fill) {
   ctx.bezierCurveTo(x + s * 0.6, y - s * 1.2, x + s * 1.5, y - s * 0.2, x, y + s * 0.9); ctx.fill();
 }
 
-const stage = lazy3d("./dodge3d.js?v=2");
+const stage = lazy3d("./dodge3d.js?v=3");
 function draw(ctx, v, env) {
   const c = COURTS[v.th | 0] || COURTS[0];
   let d3 = null;

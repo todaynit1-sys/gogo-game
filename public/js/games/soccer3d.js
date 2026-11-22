@@ -1,5 +1,5 @@
 // 떡 축구의 3D 무대
-import { THREE, createStage, makeMochi, addMochi, removeMochi, moveMochi, mat, box, mesh, canvasTex, blob } from "./stage3d.js?v=1";
+import { THREE, createStage, makeMochi, addMochi, removeMochi, moveMochi, mat, box, mesh, canvasTex, blob } from "./stage3d.js?v=2";
 import { parseLook } from "../avatar.js?v=3";
 
 const K = 1 / 44, X = (x) => (x - 480) * K, Z = (y) => (y - 280) * K;      // 2D 좌표 → 3D

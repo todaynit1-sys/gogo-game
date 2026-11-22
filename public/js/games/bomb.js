@@ -284,7 +284,7 @@ function drawItem(ctx, ch, x, y) {
   else { ctx.fillStyle = "#ffc93c"; ctx.strokeStyle = "#d99a12"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 3, y - 11); ctx.lineTo(x - 7, y + 2); ctx.lineTo(x - 1, y + 2); ctx.lineTo(x - 3, y + 11); ctx.lineTo(x + 7, y - 2); ctx.lineTo(x + 1, y - 2); ctx.closePath(); ctx.fill(); ctx.stroke(); }
 }
 
-const stage = lazy3d("./bomb3d.js?v=1");
+const stage = lazy3d("./bomb3d.js?v=2");
 function draw(ctx, v, env) {
   const th = THEMES[v.th | 0] || THEMES[0];
   ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);

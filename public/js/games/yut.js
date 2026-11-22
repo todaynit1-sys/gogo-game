@@ -263,7 +263,7 @@ function drawStick(ctx, x, y, ang, isFlat, marked) {
   ctx.restore();
 }
 
-const stage = lazy3d("./table3d.js?v=2");
+const stage = lazy3d("./table3d.js?v=3");
 let g3cur = null;
 function draw(ctx, v, env) {
   const scr = ctx, m3 = stage.get();

@@ -240,7 +240,7 @@ function drawCell(ctx, ch, x, y, t) {
   }
 }
 
-const stage = lazy3d("./side3d.js?v=2");
+const stage = lazy3d("./side3d.js?v=3");
 const CELL3 = { w: "#e0ab68", s: "#a3a8c8", d: "#8d92b4", g: "#aee1ff" }, GOBLIN = { ...parseLook("", 0), hex: "9b78e6" };
 function draw(ctx, v, env) {
   const sk = SKIES[v.th | 0] || SKIES[0];

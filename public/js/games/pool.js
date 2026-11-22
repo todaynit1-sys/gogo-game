@@ -217,7 +217,7 @@ function drawBall(ctx, n, x, y, look) {
   ctx.fillStyle = "rgba(255,255,255,.45)"; ctx.beginPath(); ctx.arc(x - BR * 0.4, y - BR * 0.45, BR * 0.25, 0, 7); ctx.fill();
 }
 
-const stage = lazy3d("./table3d.js?v=2");
+const stage = lazy3d("./table3d.js?v=3");
 function draw(ctx, v, env) {
   const f = FELTS[v.th | 0] || FELTS[0];
   const scr = ctx, m3 = stage.get();

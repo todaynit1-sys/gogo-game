@@ -194,7 +194,7 @@ function bot(s, i, mem, level) {
 }
 
 // ── 그리기 ──
-const stage = lazy3d("./table3d.js?v=2");
+const stage = lazy3d("./table3d.js?v=3");
 function draw(ctx, v, env) {
   const th = LANES[v.th | 0] || LANES[0];
   const scr = ctx, m3 = stage.get();

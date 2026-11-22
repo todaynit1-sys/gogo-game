@@ -5,7 +5,7 @@
 //   g.terrain(h, colW, { soil, grass }); g.mochi(id, look, x, y, {...}); g.rod(...); g.block(...); g.ball(...)
 //   ctx.drawImage(g.close(), 0, 0, W, H)
 
-import { THREE, createStage, makeMochi, mat, basic, box, mesh, LW, LH } from "./stage3d.js?v=1";
+import { THREE, createStage, makeMochi, mat, basic, box, mesh, LW, LH } from "./stage3d.js?v=2";
 
 let S = null;
 

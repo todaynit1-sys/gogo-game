@@ -244,7 +244,7 @@ function drawItem(ctx, it, t) {
   else { for (let k = 0; k < 3; k++) { const a = (k / 3) * Math.PI; ctx.beginPath(); ctx.moveTo(x - Math.cos(a) * 8, y - Math.sin(a) * 8); ctx.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8); ctx.stroke(); } }
 }
 
-const stage = lazy3d("./table3d.js?v=2");
+const stage = lazy3d("./table3d.js?v=3");
 function draw(ctx, v, env) {
   const th = THEMES[v.th | 0] || THEMES[0];
   const scr = ctx, m3 = stage.get();
