@@ -14,7 +14,7 @@ let muted = store.get("hp_muted") === "1";
 let musicOn = store.get("hp_music") !== "0";
 const ui = sound(() => muted);      // 화면 단추 소리
 // 게임마다 어울리는 배경음악
-const THEME = { baseball: "sport", volley: "sport", soccer: "sport", dodge: "sport", bomb: "tense", land: "tense", blocks: "puzzle", chain: "puzzle", cannon: "chill", sling: "chill", pool: "chill", alkkagi: "chill", bowling: "chill", rally: "sport", yut: "yut" };
+const THEME = { baseball: "sport", volley: "sport", soccer: "sport", dodge: "sport", bomb: "tense", land: "tense", blocks: "puzzle", chain: "puzzle", cannon: "chill", sling: "chill", pool: "chill", alkkagi: "chill", bowling: "chill", rally: "sport", yut: "yut", kart: "sport" };
 let look = store.get("hp_look") ? parseLook(store.get("hp_look")) : randomLook();
 let current = GAMES[0];   // 고른 게임
 let ws = null, room = null, game = null, pingTimer = null, leaving = false;
@@ -23,7 +23,7 @@ let soloMode = 0;         // 혼자·한 키보드에서 고른 경기 방식(�
 let gameId = null, sawLobby = false, overPending = false;
 
 // 게임 모듈은 고를 때 불러온다
-const VER = "?v=47";
+const VER = "?v=48";
 const mods = {};
 const loadMod = (id) => (mods[id] = mods[id] || import("./games/" + id + ".js" + VER));
 
@@ -169,6 +169,7 @@ function myName() {
 
 // ── 게임 카드 그림 ──
 const THUMBS = {
+  kart: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#ffcf9e"/><circle cx="262" cy="36" r="18" fill="#fff3cc"/><g fill="#e7a785"><rect x="0" y="46" width="34" height="50"/><rect x="44" y="30" width="28" height="66"/><rect x="88" y="52" width="40" height="44"/><rect x="196" y="38" width="32" height="58"/><rect x="286" y="50" width="34" height="46"/></g><g fill="#ffe9a8"><rect x="52" y="40" width="6" height="7"/><rect x="62" y="56" width="6" height="7"/><rect x="204" y="48" width="6" height="7"/><rect x="214" y="64" width="6" height="7"/></g><rect y="88" width="320" height="92" fill="#8cc46a"/><path d="M-10 176C60 120 120 112 176 120S290 132 334 98" fill="none" stroke="#e8505b" stroke-width="58"/><path d="M-10 176C60 120 120 112 176 120S290 132 334 98" fill="none" stroke="#fff8ee" stroke-width="58" stroke-dasharray="12 12"/><path d="M-10 176C60 120 120 112 176 120S290 132 334 98" fill="none" stroke="#77738a" stroke-width="46"/><path d="M-10 176C60 120 120 112 176 120S290 132 334 98" fill="none" stroke="#fff8ea" stroke-width="3" stroke-dasharray="10 12"/><g transform="rotate(12 256 92)"><rect x="240" y="76" width="32" height="32" rx="6" fill="#b79cff" stroke="#fff" stroke-width="4"/><path d="M249 87q0-7 7-7t7 6q0 5-6 7v3" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="257" cy="101" r="2.6" fill="#fff"/></g><g stroke="#2b2d6e" stroke-width="3"><rect x="34" y="138" width="50" height="20" rx="8" fill="#4d9be0"/><circle cx="42" cy="160" r="7" fill="#2b2d6e"/><circle cx="76" cy="160" r="7" fill="#2b2d6e"/><ellipse cx="58" cy="128" rx="14" ry="13" fill="#9bd88a"/></g><path d="M86 112h-30M92 126h-22M88 98h-18" stroke="#fff" stroke-width="5" stroke-linecap="round"/><g stroke="#2b2d6e" stroke-width="4"><rect x="112" y="118" width="84" height="32" rx="13" fill="#ff5d73"/><rect x="104" y="124" width="12" height="20" rx="5" fill="#fff8ee"/><circle cx="128" cy="152" r="12" fill="#2b2d6e"/><circle cx="182" cy="152" r="12" fill="#2b2d6e"/><ellipse cx="160" cy="102" rx="24" ry="22" fill="#ff9db5"/></g><circle cx="152" cy="98" r="4" fill="#2b2d6e"/><circle cx="168" cy="98" r="4" fill="#2b2d6e"/><path d="M154 108q6 5 12 0" fill="none" stroke="#2b2d6e" stroke-width="3" stroke-linecap="round"/><path d="M98 146l-14 8M100 136l-18 0" stroke="#ffb13b" stroke-width="5" stroke-linecap="round"/></svg>`,
   volley: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#9ad8ff"/><circle cx="270" cy="38" r="20" fill="#fff3b0"/><rect y="138" width="320" height="42" fill="#f6dca6"/><rect x="156" y="78" width="8" height="62" fill="#8a5a3c"/><rect x="153" y="74" width="14" height="7" fill="#fff"/><ellipse cx="82" cy="118" rx="30" ry="26" fill="#ff9db5" stroke="#2b2d6e" stroke-width="4"/><circle cx="74" cy="112" r="5" fill="#2b2d6e"/><circle cx="94" cy="112" r="5" fill="#2b2d6e"/><ellipse cx="238" cy="98" rx="28" ry="30" fill="#9bd88a" stroke="#2b2d6e" stroke-width="4"/><circle cx="228" cy="92" r="5" fill="#2b2d6e"/><circle cx="246" cy="92" r="5" fill="#2b2d6e"/><circle cx="186" cy="46" r="17" fill="#fff" stroke="#2b2d6e" stroke-width="4"/><path d="M176 46a10 10 0 0 1 14-9" stroke="#ffb703" stroke-width="5" fill="none"/></svg>`,
   blocks: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#bfe3ff"/><g stroke="#2b2d6e" stroke-width="4"><rect x="60" y="120" width="34" height="34" fill="#ff5d73"/><rect x="94" y="120" width="34" height="34" fill="#ffc93c"/><rect x="128" y="120" width="34" height="34" fill="#8ed081"/><rect x="94" y="86" width="34" height="34" fill="#ffc93c"/><rect x="196" y="120" width="34" height="34" fill="#b79cff"/><rect x="230" y="120" width="34" height="34" fill="#b79cff"/><rect x="230" y="86" width="34" height="34" fill="#ff5d73"/><rect x="162" y="26" width="34" height="34" fill="#7cc6fe"/><rect x="196" y="26" width="34" height="34" fill="#7cc6fe"/></g></svg>`,
   chain: `<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="#e3d8ff"/><g stroke="#2b2d6e" stroke-width="4"><circle cx="100" cy="130" r="24" fill="#ff5d73"/><circle cx="150" cy="130" r="24" fill="#ff5d73"/><circle cx="150" cy="82" r="24" fill="#ff5d73"/><circle cx="200" cy="130" r="24" fill="#ffc93c"/><circle cx="250" cy="130" r="24" fill="#8ed081"/><circle cx="200" cy="82" r="24" fill="#7cc6fe"/><circle cx="110" cy="42" r="24" fill="#ffc93c"/></g></svg>`,
@@ -223,7 +224,7 @@ function renderCards() {
     const h = b.querySelector("h3"); h.textContent = g.name;
     if (!g.ready) { const s = document.createElement("span"); s.className = "soon"; s.textContent = "준비 중"; h.append(s); }
     b.querySelector(".tag").textContent = g.tag;
-    if (g.id === "rally") { const s = document.createElement("span"); s.className = "newb"; s.textContent = "새 게임"; h.append(s); }
+    if (g.id === "kart") { const s = document.createElement("span"); s.className = "newb"; s.textContent = "새 게임"; h.append(s); }
     const rec = loadRec()[g.id];
     if (rec && rec.w) { const w = document.createElement("span"); w.className = "wins"; w.textContent = `이긴 판 ${rec.w}`; h.append(w); }
     b.querySelector("p").textContent = g.desc;
